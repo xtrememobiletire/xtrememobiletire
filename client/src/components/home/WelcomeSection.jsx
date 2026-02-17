@@ -1,5 +1,8 @@
 import { GiTireIronCross } from 'react-icons/gi';
 import { FaClock, FaTruck, FaMapMarkedAlt } from 'react-icons/fa';
+import welcome1 from '../../assets/welcome1.jpg';
+import welcome2 from '../../assets/welcome2.jpg';
+import welcome3 from '../../assets/welcome3.jpeg';
 
 const WelcomeSection = () => {
   const services = [
@@ -7,19 +10,19 @@ const WelcomeSection = () => {
       icon: <FaClock />,
       title: '24/7 Mobile Service',
       description: 'Professional mobile tire services available around the clock. Our fully equipped mobile units are ready day or night to keep your fleet running.',
-      image: 'https://images.unsplash.com/photo-1625047509168-a7026f36de04?w=400&q=80',
+      image: welcome1,
     },
     {
       icon: <FaTruck />,
       title: 'Fleet-Focused Solutions',
       description: 'Specialized tire programs for commercial fleets. Minimize downtime, prevent delays, and keep your operations running smoothly with our expert service.',
-      image: 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?w=400&q=80',
+      image: welcome2,
     },
     {
       icon: <FaMapMarkedAlt />,
       title: 'Coast to Coast Coverage',
       description: 'Serving VA, MD, KY, NC, TN, Washington DC, and Ontario Canada. Dependable on-site tire solutions wherever your vehicles operate.',
-      image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80',
+      image: welcome3,
     },
   ];
 

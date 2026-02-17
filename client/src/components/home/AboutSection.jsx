@@ -1,48 +1,39 @@
 import { Link } from 'react-router-dom';
 import { GiTireIronCross } from 'react-icons/gi';
-import { FaPlay } from 'react-icons/fa';
+import aboutVideo from '../../assets/aboutvideo.mp4';
 
 const AboutSection = () => {
   return (
     <section className="bg-black py-16 md:py-24 relative overflow-hidden">
-      {/* Background Tire Pattern */}
-      <div className="absolute right-0 top-0 w-1/2 h-full opacity-10">
-        <img
-          src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80"
-          alt="Tire"
-          className="w-full h-full object-cover"
-        />
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 relative z-10">
+<div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          {/* Left - Image */}
-          <div className="relative">
-            <img
-              src="https://images.unsplash.com/photo-1625047509168-a7026f36de04?w=600&q=80"
-              alt="Tire Service"
-              className="rounded-lg w-full"
+          {/* Left - Video */}
+          <div className="relative rounded-lg overflow-hidden">
+            <video
+              src={aboutVideo}
+              className="w-full rounded-lg"
+              autoPlay
+              muted
+              loop
+              playsInline
             />
-            {/* Play Button */}
-            <button className="absolute bottom-8 right-8 w-16 h-16 bg-red-600 rounded-full flex items-center justify-center text-white hover:bg-red-700 transition-all hover:scale-110">
-              <FaPlay className="ml-1" />
-            </button>
           </div>
 
           {/* Right - Content */}
           <div>
             <div className="flex items-center gap-2 mb-4">
               <GiTireIronCross className="text-red-600 text-2xl" />
-              <span className="text-red-600 font-medium">About Tyrest</span>
+              <span className="text-red-600 font-medium">About Xtreme Mobile Tire</span>
             </div>
             <h2 className="text-white text-3xl md:text-4xl lg:text-5xl font-bold mb-6 leading-tight">
-              THE BEST TIRE SOLUTION FOR<br />
-              <span className="text-red-600">YOUR PRIVATE CAR</span>
+              PROFESSIONAL TIRE SERVICES<br />
+              <span className="text-red-600">DELIVERED TO YOUR DOOR</span>
             </h2>
+            <p className="text-gray-400 mb-4 leading-relaxed">
+              Xtreme Mobile Tire is your go-to solution for expert tire services brought directly to you — whether you're at home, at work, or stranded on the roadside. We handle everything from tire changes and repairs to rotations and balancing, all without you having to leave your location. Our certified technicians arrive fully equipped and ready to get you back on the road safely and efficiently.
+            </p>
             <p className="text-gray-400 mb-8 leading-relaxed">
-              Curabitur sed facilisis erat. Vestibulum pharetra eros eget fringilla porttitor.
-              Duis a orci nunc. Suspendisse ac convallis sapien, quis commodo libero. Donec
-              diam massa, porttitor ac eros varius eleifend.
+              Our mission is simple — make tire service fast, hassle-free, and accessible for every driver. We're committed to redefining what mobile tire service looks like by putting your safety and convenience first, every single time.
             </p>
 
             {/* Stats */}
