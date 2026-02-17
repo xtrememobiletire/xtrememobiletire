@@ -10,9 +10,36 @@ const Hero = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
 
   const slides = [
-    { type: 'image', src: slide3 },
-    { type: 'video', src: xtremeVideo },
-    { type: 'image', src: slide2 },
+    {
+      type: 'image',
+      src: slide3,
+      badge: 'XMT Service - 24/7 Mobile Tire Solutions',
+      title: '24/7 FLEET TIRE',
+      subtitle: 'SUPPORT',
+      description: '24/7 Reliable Mobile Tire Solutions for Commercial Fleets & Individual Vehicles. Professional on-site tire services wherever your vehicles operate — day or night. Anytime. Anywhere.',
+      buttonText: 'Learn More',
+      buttonLink: '/about',
+    },
+    {
+      type: 'video',
+      src: xtremeVideo,
+      badge: 'Serving Canada & USA',
+      title: 'COAST TO COAST',
+      subtitle: 'TIRE SERVICES',
+      description: 'Providing professional mobile tire services across Virginia (VA), Maryland (MD), Kentucky (KY), North Carolina (NC), Tennessee (TN), Washington DC, and Ontario, Canada. We deliver dependable on-site tire solutions wherever you are.',
+      buttonText: 'View Services',
+      buttonLink: '/services',
+    },
+    {
+      type: 'image',
+      src: slide2,
+      badge: 'Quality You Can Trust',
+      title: 'PREMIUM QUALITY',
+      subtitle: 'TIRE INSTALLATION',
+      description: 'Experience the difference of premium tire installation and maintenance. We use state-of-the-art equipment and follow industry best practices for your safety.',
+      buttonText: 'Book Now',
+      buttonLink: '/booking',
+    },
   ];
 
   // Auto-play slider
@@ -106,28 +133,28 @@ const Hero = () => {
             <div className="w-8 h-8 md:w-10 md:h-10 border-2 border-red-600 rounded-full flex items-center justify-center">
               <GiTireIronCross className="text-red-600 text-lg md:text-xl" />
             </div>
-            <span className="text-red-600 font-medium text-base md:text-lg">We Are Xtreme Mobile Tire</span>
+            <span className="text-red-600 font-medium text-base md:text-lg">
+              {slides[currentSlide].badge}
+            </span>
           </div>
 
           {/* Heading */}
           <h1 className="text-white text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-4 md:mb-6">
-            DETAIL & PRECISION<br />
-            CAR TIRE SERVICE
+            {slides[currentSlide].title}<br />
+            {slides[currentSlide].subtitle}
           </h1>
 
           {/* Description */}
           <p className="text-gray-300 text-sm sm:text-base md:text-lg mb-6 md:mb-8 leading-relaxed max-w-2xl mx-auto lg:mx-0">
-            Suspendisse in magna in elit hendrerit condimentum. Phasellus
-            eu justo mi. Proin aliquet, mauris a volutpat lobortis, erat libero
-            condimentum metus, eu tincidunt felis ligula in.
+            {slides[currentSlide].description}
           </p>
 
           {/* CTA Button */}
           <Link
-            to="/about"
+            to={slides[currentSlide].buttonLink}
             className="inline-block bg-red-600 hover:bg-red-700 text-white font-semibold px-6 py-3 md:px-8 md:py-4 rounded transition text-sm md:text-base"
           >
-            Learn More
+            {slides[currentSlide].buttonText}
           </Link>
         </div>
       </div>

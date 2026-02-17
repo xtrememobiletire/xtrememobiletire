@@ -1,24 +1,24 @@
 import { GiTireIronCross } from 'react-icons/gi';
-import { FaDollarSign, FaCog, FaUserTie } from 'react-icons/fa';
+import { FaClock, FaTruck, FaMapMarkedAlt } from 'react-icons/fa';
 
 const WelcomeSection = () => {
   const services = [
     {
-      icon: <FaDollarSign />,
-      title: 'Affordable Price',
-      description: 'Phasellus volutpat neque a tellus venenatis, a euismod augue facilisis. Fusce ut metus mattis.',
+      icon: <FaClock />,
+      title: '24/7 Mobile Service',
+      description: 'Professional mobile tire services available around the clock. Our fully equipped mobile units are ready day or night to keep your fleet running.',
       image: 'https://images.unsplash.com/photo-1625047509168-a7026f36de04?w=400&q=80',
     },
     {
-      icon: <FaCog />,
-      title: 'Fast Service',
-      description: 'Phasellus volutpat neque a tellus venenatis, a euismod augue facilisis. Fusce ut metus mattis.',
+      icon: <FaTruck />,
+      title: 'Fleet-Focused Solutions',
+      description: 'Specialized tire programs for commercial fleets. Minimize downtime, prevent delays, and keep your operations running smoothly with our expert service.',
       image: 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?w=400&q=80',
     },
     {
-      icon: <FaUserTie />,
-      title: 'High Quality',
-      description: 'Phasellus volutpat neque a tellus venenatis, a euismod augue facilisis. Fusce ut metus mattis.',
+      icon: <FaMapMarkedAlt />,
+      title: 'Coast to Coast Coverage',
+      description: 'Serving VA, MD, KY, NC, TN, Washington DC, and Ontario Canada. Dependable on-site tire solutions wherever your vehicles operate.',
       image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80',
     },
   ];
@@ -30,13 +30,13 @@ const WelcomeSection = () => {
         <div className="text-center mb-12">
           <div className="flex items-center justify-center gap-2 mb-4">
             <GiTireIronCross className="text-red-600 text-2xl" />
-            <span className="text-red-600 font-medium">Welcome to Tyrest</span>
+            <span className="text-red-600 font-medium">Welcome to XTREME MOBILE TIRE Service</span>
           </div>
           <h2 className="text-white text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
-            ALL YOU NEED IN <span className="text-red-600">ONE PLACE</span>
+            24/7 RELIABLE MOBILE TIRE <span className="text-red-600">SOLUTIONS</span>
           </h2>
           <p className="text-gray-400 max-w-3xl mx-auto">
-            Curabitur sed facilisis erat. Vestibulum pharetra eros eget fringilla porttitor. Duis a orci nunc. Suspendisse ac convallis sapien, quis commodo libero.
+            Professional mobile tire services for commercial fleets and individual vehicles. Our fleet-centered programs minimize downtime, prevent costly delays, and keep your operations running smoothly.
           </p>
         </div>
 
