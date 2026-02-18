@@ -16,10 +16,10 @@ const Home = () => {
       <FeaturesBar />
       <WelcomeSection />
       <AboutSection />
+      <BlogSection />
       <ServicesGrid />
       <FleetSection />
       <PackagesSection />
-      <BlogSection />
       <TestimonialsSection />
       <DiscountSection />
     </div>

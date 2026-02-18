@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FaPhoneAlt, FaBars, FaTimes } from 'react-icons/fa';
+import { FaBars, FaTimes } from 'react-icons/fa';
 import logo from '../../assets/xtrememobiletire.webp';
 
 const Navbar = () => {
@@ -36,14 +36,21 @@ const Navbar = () => {
           </Link>
         </div>
 
-        {/* Desktop Contact Button */}
-        <Link
-          to="/contact"
-          className="hidden lg:flex bg-red-600 hover:bg-red-700 text-white px-4 xl:px-6 py-2 xl:py-3 rounded items-center gap-2 transition text-sm xl:text-base"
-        >
-          <FaPhoneAlt />
-          Contact Us
-        </Link>
+        {/* Desktop Auth Links */}
+        <div className="hidden lg:flex items-center gap-4">
+          <Link
+            to="/account"
+            className="text-red-600 font-medium underline underline-offset-4 hover:text-red-400 transition text-sm xl:text-base"
+          >
+            Sign In
+          </Link>
+          <Link
+            to="/contact"
+            className="bg-red-600 hover:bg-red-700 text-white px-4 xl:px-6 py-2 xl:py-3 rounded font-semibold transition text-sm xl:text-base"
+          >
+            Sign Up
+          </Link>
+        </div>
 
         {/* Mobile Menu Button */}
         <button
@@ -101,15 +108,23 @@ const Navbar = () => {
               Contact Us
             </Link>
 
-            {/* Mobile Contact Button */}
-            <Link
-              to="/contact"
-              onClick={() => setMobileMenu(false)}
-              className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded flex items-center justify-center gap-2 transition mt-2"
-            >
-              <FaPhoneAlt />
-              Contact Us
-            </Link>
+            {/* Mobile Auth */}
+            <div className="flex gap-3 mt-2">
+              <Link
+                to="/account"
+                onClick={() => setMobileMenu(false)}
+                className="flex-1 text-center text-red-600 font-medium underline underline-offset-4 hover:text-red-400 transition py-3"
+              >
+                Sign In
+              </Link>
+              <Link
+                to="/contact"
+                onClick={() => setMobileMenu(false)}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded flex items-center justify-center font-semibold transition"
+              >
+                Sign Up
+              </Link>
+            </div>
           </div>
         </div>
       )}
