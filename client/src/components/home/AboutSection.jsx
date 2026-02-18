@@ -27,7 +27,7 @@ const AboutSection = () => {
             </div>
             <h2 className="text-white text-3xl md:text-4xl lg:text-5xl font-bold mb-6 leading-tight">
               PROFESSIONAL TIRE SERVICES<br />
-              <span className="text-red-600">DELIVERED TO YOUR DOOR</span>
+              <span className="text-red-600">DELIVERED TO YOUR DOORSTEP</span>
             </h2>
             <p className="text-gray-400 mb-4 leading-relaxed">
               Xtreme Mobile Tire is your go-to solution for expert tire services brought directly to you — whether you're at home, at work, or stranded on the roadside. We handle everything from tire changes and repairs to rotations and balancing, all without you having to leave your location. Our certified technicians arrive fully equipped and ready to get you back on the road safely and efficiently.
