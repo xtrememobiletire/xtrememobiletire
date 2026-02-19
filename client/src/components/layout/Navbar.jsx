@@ -1,10 +1,23 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { FaBars, FaTimes } from 'react-icons/fa';
 import logo from '../../assets/xtrememobiletire.webp';
 
+const navLinks = [
+  { label: 'Home', to: '/' },
+  { label: 'About Us', to: '/about' },
+  { label: 'Services', to: '/services' },
+  { label: 'Booking', to: '/booking' },
+  { label: 'Shop', to: '/shop' },
+  { label: 'Contact Us', to: '/contact' },
+];
+
 const Navbar = () => {
   const [mobileMenu, setMobileMenu] = useState(false);
+  const { pathname } = useLocation();
+
+  const isActive = (to) =>
+    to === '/' ? pathname === '/' : pathname.startsWith(to);
 
   return (
     <nav className="bg-[#1a1a1a] py-0 px-4 md:py-4 md:px-8 sticky top-0 z-50">
@@ -16,24 +29,17 @@ const Navbar = () => {
 
         {/* Desktop Navigation Links */}
         <div className="hidden lg:flex items-center gap-6 xl:gap-8">
-          <Link to="/" className="text-red-600 font-medium hover:text-red-500 transition">
-            Home
-          </Link>
-          <Link to="/about" className="text-white font-medium hover:text-red-600 transition">
-            About Us
-          </Link>
-          <Link to="/services" className="text-white font-medium hover:text-red-600 transition">
-            Services
-          </Link>
-          <Link to="/booking" className="text-white font-medium hover:text-red-600 transition">
-            Booking
-          </Link>
-          <Link to="/shop" className="text-white font-medium hover:text-red-600 transition">
-            Shop
-          </Link>
-          <Link to="/contact" className="text-white font-medium hover:text-red-600 transition">
-            Contact Us
-          </Link>
+          {navLinks.map(({ label, to }) => (
+            <Link
+              key={to}
+              to={to}
+              className={`font-medium transition ${
+                isActive(to) ? 'text-red-600' : 'text-white hover:text-red-600'
+              }`}
+            >
+              {label}
+            </Link>
+          ))}
         </div>
 
         {/* Desktop Auth Links */}
@@ -65,48 +71,18 @@ const Navbar = () => {
       {mobileMenu && (
         <div className="lg:hidden absolute top-full left-0 w-full bg-[#1a1a1a] border-t border-gray-700 py-4 px-4">
           <div className="flex flex-col gap-4">
-            <Link
-              to="/"
-              onClick={() => setMobileMenu(false)}
-              className="text-red-600 font-medium hover:text-red-500 transition py-2"
-            >
-              Home
-            </Link>
-            <Link
-              to="/about"
-              onClick={() => setMobileMenu(false)}
-              className="text-white font-medium hover:text-red-600 transition py-2"
-            >
-              About Us
-            </Link>
-            <Link
-              to="/services"
-              onClick={() => setMobileMenu(false)}
-              className="text-white font-medium hover:text-red-600 transition py-2"
-            >
-              Services
-            </Link>
-            <Link
-              to="/booking"
-              onClick={() => setMobileMenu(false)}
-              className="text-white font-medium hover:text-red-600 transition py-2"
-            >
-              Booking
-            </Link>
-            <Link
-              to="/shop"
-              onClick={() => setMobileMenu(false)}
-              className="text-white font-medium hover:text-red-600 transition py-2"
-            >
-              Shop
-            </Link>
-            <Link
-              to="/contact"
-              onClick={() => setMobileMenu(false)}
-              className="text-white font-medium hover:text-red-600 transition py-2"
-            >
-              Contact Us
-            </Link>
+            {navLinks.map(({ label, to }) => (
+              <Link
+                key={to}
+                to={to}
+                onClick={() => setMobileMenu(false)}
+                className={`font-medium transition py-2 ${
+                  isActive(to) ? 'text-red-600' : 'text-white hover:text-red-600'
+                }`}
+              >
+                {label}
+              </Link>
+            ))}
 
             {/* Mobile Auth */}
             <div className="flex gap-3 mt-2">

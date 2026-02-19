@@ -8,6 +8,7 @@ import Contact from './pages/Contact';
 import Booking from './pages/Booking';
 import Shop from './pages/Shop';
 import Account from './pages/Account';
+import NotFound from './pages/NotFound';
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
           <Route path="/booking" element={<Booking />} />
           <Route path="/shop" element={<Shop />} />
           <Route path="/account" element={<Account />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
         <Footer />
       </div>
