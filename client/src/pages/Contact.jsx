@@ -3,12 +3,25 @@ import { Link } from 'react-router-dom';
 import { FaMapMarkerAlt, FaPhone, FaEnvelope, FaClock, FaFacebookF, FaTwitter, FaInstagram, FaYoutube } from 'react-icons/fa';
 import xLogo from '../assets/x.png';
 import slide2 from '../assets/slide2.jpg';
+import API from '../api';
 
 const Contact = () => {
   const [form, setForm] = useState({ name: '', email: '', phone: '', subject: '', message: '' });
+  const [status, setStatus] = useState({ loading: false, success: '', error: '' });
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
-  const handleSubmit = (e) => { e.preventDefault(); };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setStatus({ loading: true, success: '', error: '' });
+    try {
+      const res = await API.post('/contact', form);
+      setStatus({ loading: false, success: res.data.message, error: '' });
+      setForm({ name: '', email: '', phone: '', subject: '', message: '' });
+    } catch (err) {
+      setStatus({ loading: false, success: '', error: err.response?.data?.message || 'Something went wrong.' });
+    }
+  };
 
   return (
     <div className="bg-black text-white">
@@ -57,7 +70,7 @@ const Contact = () => {
               lines: ['11815 Medway Church Loop,', 'Manassas, VA 20109'],
             },
             {
-              icon: <FaPhone className="text-2xl" />,
+              icon: <FaPhone className="text-2xl scale-x-[-1]" />,
               title: 'Phone Numbers',
               lines: ['CA: (437) 375-5674', 'USA: (804) 326-5442'],
             },
@@ -153,11 +166,14 @@ const Contact = () => {
                   className="w-full bg-black border border-gray-700 focus:border-red-600 text-white placeholder-gray-600 px-4 py-3 rounded text-sm outline-none transition resize-none"
                 />
               </div>
+              {status.success && <p className="text-green-400 text-sm text-center">{status.success}</p>}
+              {status.error && <p className="text-red-400 text-sm text-center">{status.error}</p>}
               <button
                 type="submit"
-                className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded transition tracking-wide"
+                disabled={status.loading}
+                className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white font-bold py-3 rounded transition tracking-wide"
               >
-                Send Message
+                {status.loading ? 'Sending...' : 'Send Message'}
               </button>
             </form>
           </div>

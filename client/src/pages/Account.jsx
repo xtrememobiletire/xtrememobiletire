@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { FaTruck, FaUser, FaArrowRight, FaArrowLeft, FaEnvelope, FaLock } from 'react-icons/fa';
+import API from '../api';
 
 import fleet1 from '../assets/fleet/fleet1.webp';
 import member1 from '../assets/member1.webp';
@@ -17,8 +18,18 @@ const FleetForm = ({ onBack }) => {
     companyName: '', companyWebsite: '', companyEmail: '',
     phone: '', address: '', vehicles: '', password: '',
   });
+  const [status, setStatus] = useState({ loading: false, success: '', error: '' });
   const handle = (e) => setForm({ ...form, [e.target.name]: e.target.value });
-  const handleSubmit = (e) => { e.preventDefault(); };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setStatus({ loading: true, success: '', error: '' });
+    try {
+      const res = await API.post('/fleet/register', form);
+      setStatus({ loading: false, success: res.data.message, error: '' });
+    } catch (err) {
+      setStatus({ loading: false, success: '', error: err.response?.data?.message || 'Something went wrong.' });
+    }
+  };
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -79,9 +90,11 @@ const FleetForm = ({ onBack }) => {
                 placeholder="••••••••" required className={`${inputCls} pl-10`} />
             </div>
           </div>
-          <button type="submit"
-            className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 rounded-lg transition tracking-wide uppercase text-sm flex items-center justify-center gap-2">
-            <FaArrowRight className="text-xs" /> Submit Fleet Registration
+          {status.success && <p className="text-green-400 text-sm text-center">{status.success}</p>}
+          {status.error && <p className="text-red-400 text-sm text-center">{status.error}</p>}
+          <button type="submit" disabled={status.loading}
+            className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white font-bold py-3.5 rounded-lg transition tracking-wide uppercase text-sm flex items-center justify-center gap-2">
+            <FaArrowRight className="text-xs" /> {status.loading ? 'Submitting...' : 'Submit Fleet Registration'}
           </button>
         </form>
       </div>
@@ -94,8 +107,18 @@ const IndividualForm = ({ onBack }) => {
   const [form, setForm] = useState({
     name: '', email: '', phone: '', website: '', vehicle: '', tireSize: '', password: '',
   });
+  const [status, setStatus] = useState({ loading: false, success: '', error: '' });
   const handle = (e) => setForm({ ...form, [e.target.name]: e.target.value });
-  const handleSubmit = (e) => { e.preventDefault(); };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setStatus({ loading: true, success: '', error: '' });
+    try {
+      const res = await API.post('/members/register', form);
+      setStatus({ loading: false, success: res.data.message, error: '' });
+    } catch (err) {
+      setStatus({ loading: false, success: '', error: err.response?.data?.message || 'Something went wrong.' });
+    }
+  };
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -156,9 +179,11 @@ const IndividualForm = ({ onBack }) => {
                 placeholder="••••••••" required className={`${inputCls} pl-10`} />
             </div>
           </div>
-          <button type="submit"
-            className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 rounded-lg transition tracking-wide uppercase text-sm flex items-center justify-center gap-2">
-            <FaArrowRight className="text-xs" /> Submit Membership Request
+          {status.success && <p className="text-green-400 text-sm text-center">{status.success}</p>}
+          {status.error && <p className="text-red-400 text-sm text-center">{status.error}</p>}
+          <button type="submit" disabled={status.loading}
+            className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white font-bold py-3.5 rounded-lg transition tracking-wide uppercase text-sm flex items-center justify-center gap-2">
+            <FaArrowRight className="text-xs" /> {status.loading ? 'Submitting...' : 'Submit Membership Request'}
           </button>
         </form>
       </div>
@@ -169,8 +194,22 @@ const IndividualForm = ({ onBack }) => {
 /* ── Login Form ── */
 const LoginForm = ({ onBack }) => {
   const [form, setForm] = useState({ email: '', password: '' });
+  const [status, setStatus] = useState({ loading: false, error: '' });
+  const navigate = useNavigate();
   const handle = (e) => setForm({ ...form, [e.target.name]: e.target.value });
-  const handleSubmit = (e) => { e.preventDefault(); };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setStatus({ loading: true, error: '' });
+    try {
+      const res = await API.post('/auth/login', form);
+      localStorage.setItem('xmt_token', res.data.token);
+      localStorage.setItem('xmt_role', res.data.role);
+      localStorage.setItem('xmt_name', res.data.name);
+      if (res.data.role === 'admin') navigate('/admin');
+    } catch (err) {
+      setStatus({ loading: false, error: err.response?.data?.message || 'Login failed.' });
+    }
+  };
 
   return (
     <div className="max-w-md mx-auto">
@@ -205,9 +244,10 @@ const LoginForm = ({ onBack }) => {
                 className={`${inputCls} pl-10`} />
             </div>
           </div>
-          <button type="submit"
-            className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 rounded-lg transition tracking-wide uppercase text-sm flex items-center justify-center gap-2">
-            <FaArrowRight className="text-xs" /> Sign In
+          {status.error && <p className="text-red-400 text-sm text-center">{status.error}</p>}
+          <button type="submit" disabled={status.loading}
+            className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white font-bold py-3.5 rounded-lg transition tracking-wide uppercase text-sm flex items-center justify-center gap-2">
+            <FaArrowRight className="text-xs" /> {status.loading ? 'Signing In...' : 'Sign In'}
           </button>
         </form>
         <p className="text-center text-gray-500 text-xs mt-5">

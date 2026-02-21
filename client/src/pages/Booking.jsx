@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { FaCalendarAlt, FaPhone, FaEnvelope, FaMapMarkerAlt, FaArrowRight } from 'react-icons/fa';
 import slide2 from '../assets/slide2.jpg';
 import xLogo from '../assets/x.png';
+import API from '../api';
 
 const SERVICES = [
   'Tire Repair - Plug',
@@ -32,12 +33,20 @@ const Booking = () => {
     service: '',
     tireSize: '',
   });
+  const [status, setStatus] = useState({ loading: false, success: '', error: '' });
 
   const handle = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // handle submission
+    setStatus({ loading: true, success: '', error: '' });
+    try {
+      const res = await API.post('/bookings', form);
+      setStatus({ loading: false, success: res.data.message, error: '' });
+      setForm({ fullName: '', email: '', phone: '', schedule: '', service: '', tireSize: '' });
+    } catch (err) {
+      setStatus({ loading: false, success: '', error: err.response?.data?.message || 'Something went wrong.' });
+    }
   };
 
   return (
@@ -225,12 +234,15 @@ const Booking = () => {
 
               {/* Submit */}
               <div className="pt-2">
+                {status.success && <p className="text-green-400 text-sm text-center mb-3">{status.success}</p>}
+                {status.error && <p className="text-red-400 text-sm text-center mb-3">{status.error}</p>}
                 <button
                   type="submit"
-                  className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 rounded-lg transition-all duration-300 hover:scale-[1.02] tracking-wide uppercase text-sm flex items-center justify-center gap-2"
+                  disabled={status.loading}
+                  className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white font-bold py-3.5 rounded-lg transition-all duration-300 hover:scale-[1.02] tracking-wide uppercase text-sm flex items-center justify-center gap-2"
                 >
                   <FaCalendarAlt />
-                  Confirm Booking
+                  {status.loading ? 'Submitting...' : 'Confirm Booking'}
                 </button>
               </div>
 
