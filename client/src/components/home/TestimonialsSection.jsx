@@ -1,4 +1,4 @@
-import { GiTireIronCross } from 'react-icons/gi';
+import xLogo from '../../assets/x.png';
 import { FaGoogle } from 'react-icons/fa';
 import review1 from '../../assets/reviews/review1.jpeg';
 import review2 from '../../assets/reviews/review2.jpeg';
@@ -8,8 +8,10 @@ import review5 from '../../assets/reviews/review5.jpeg';
 import review6 from '../../assets/reviews/review6.jpeg';
 import review7 from '../../assets/reviews/review7.jpeg';
 import review8 from '../../assets/reviews/review8.jpeg';
+import review9 from '../../assets/reviews/review9.png';
+import harryKing from '../../assets/reviews/harryking.jpeg';
 
-const reviews = [review1, review2, review3, review4, review5, review6, review7, review8];
+const reviews = [review1, review2, review3, review4, review5, review6, review7, review8, review9];
 // Duplicate once — animation scrolls exactly -50% for a seamless loop
 const duplicated = [...reviews, ...reviews];
 
@@ -25,29 +27,44 @@ const TestimonialsSection = () => {
         {/* Header */}
         <div className="text-center mb-12">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <GiTireIronCross className="text-red-600 text-2xl" />
+            <img src={xLogo} alt="X" className="w-6 h-6 object-contain" />
             <span className="text-red-600 font-medium tracking-widest uppercase text-sm">Real Client Feedback</span>
           </div>
           <h2 className="text-white text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
             WHAT OUR CLIENTS <span className="text-red-600">SAY</span>
           </h2>
-          <p className="text-gray-400 max-w-2xl mx-auto text-base">
-            Don&apos;t just take our word for it — read what our customers have to say about Xtreme Mobile Tire Service.
-          </p>
+      
 
-          {/* Google rating badge */}
-          <div className="inline-flex items-center gap-2 mt-5 bg-[#1a1a1a] border border-red-600/30 rounded-full px-5 py-2">
-            <FaGoogle className="text-white text-base" />
-            <span className="text-white font-semibold text-sm">Google Verified Reviews</span>
-            <span className="flex gap-0.5 ml-1">
-              {[...Array(5)].map((_, i) => (
-                <svg key={i} className="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.957a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.37 2.448a1 1 0 00-.364 1.118l1.287 3.957c.3.921-.755 1.688-1.54 1.118l-3.37-2.448a1 1 0 00-1.175 0l-3.37 2.448c-.784.57-1.838-.197-1.54-1.118l1.287-3.957a1 1 0 00-.364-1.118L2.063 9.384c-.783-.57-.38-1.81.588-1.81h4.162a1 1 0 00.95-.69L9.049 2.927z" />
-                </svg>
-              ))}
-            </span>
-            <span className="text-gray-400 text-xs ml-1">5.0</span>
+          {/* Harry King highlight */}
+          <div className="inline-flex items-center gap-3 mt-6 bg-gradient-to-r from-red-950/60 via-[#1a1a1a] to-red-950/60 border border-red-600/40 rounded-2xl px-6 py-4 max-w-xl mx-auto">
+            <div className="flex-shrink-0 w-10 h-10 rounded-full overflow-hidden border-2 border-red-600 shadow-lg shadow-red-900/40">
+              <img src={harryKing} alt="Harry King" className="w-full h-full object-cover" />
+            </div>
+            <div className="text-left">
+              <p className="text-white font-semibold text-sm leading-snug">
+                Recognized by our clients for outstanding leadership &mdash;
+              </p>
+              <p className="text-red-400 font-bold text-sm tracking-wide mt-0.5">
+                Harry King &nbsp;<span className="text-gray-400 font-normal text-xs">· Director of Operations</span>
+              </p>
+              <div className="flex items-center gap-3 mt-1">
+                <a
+                  href="mailto:Harry@xtrememobiletire.com"
+                  className="text-gray-400 text-xs hover:text-red-400 transition-colors duration-200"
+                >
+                  Mail: Harry@xtrememobiletire.com
+                </a>
+                <span className="text-gray-400 text-xs">|</span>
+                <a
+                  href="tel:4373755674"
+                  className="text-gray-400 text-xs hover:text-red-400 transition-colors duration-200"
+                >
+                 Phone: (437) 375-5674
+                </a>
+              </div>
+            </div>
           </div>
+
         </div>
       </div>
 

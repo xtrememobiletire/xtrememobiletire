@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom';
 import { FaArrowRight, FaOilCan, FaBolt, FaKey, FaGasPump, FaShieldAlt, FaWarehouse, FaTag, FaStar, FaCar, FaTruck, FaTools, FaWrench, FaCheckCircle } from 'react-icons/fa';
 import { GiTireIronCross, GiCarWheel } from 'react-icons/gi';
+import xLogo from '../assets/x.png';
 import TestimonialsSection from '../components/home/TestimonialsSection';
-import PackagesSection from '../components/home/PackagesSection';
 import slide2 from '../assets/slide2.jpg';
 import welcome2 from '../assets/welcome2.jpg';
 import fleet1 from '../assets/fleet/fleet1.webp';
@@ -66,7 +66,7 @@ const Services = () => {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-16">
         <div className="text-center mb-12">
           <div className="flex items-center justify-center gap-2 mb-2">
-            <GiTireIronCross className="text-red-600 text-xl" />
+            <img src={xLogo} alt="X" className="w-5 h-5 object-contain" />
             <span className="text-red-500 text-sm font-semibold uppercase tracking-widest">Our Services</span>
           </div>
           <h2 className="text-3xl sm:text-4xl font-extrabold">
@@ -109,8 +109,6 @@ const Services = () => {
       {/* ── Client Reviews ── */}
       <TestimonialsSection />
 
-      {/* ── Packages ── */}
-      <PackagesSection />
 
       {/* ── Consultation / Quality ── */}
       <section className="bg-[#0d0d0d] py-16">
@@ -164,28 +162,6 @@ const Services = () => {
         </div>
       </section>
 
-      {/* ── Discount Banner ── */}
-      <section
-        className="relative py-20 text-center"
-        style={{ backgroundImage: `url(${fleet1})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
-      >
-        <div className="absolute inset-0 bg-black/78" />
-        <div className="relative z-10 px-4">
-          <p className="text-red-500 text-xs font-semibold uppercase tracking-widest mb-2">Join With Your Friends</p>
-          <h2 className="text-3xl sm:text-4xl font-extrabold mb-3">
-            GET <span className="text-red-600">30% DISCOUNT</span>
-          </h2>
-          <p className="text-gray-300 text-sm max-w-xl mx-auto mb-6">
-            Refer a friend and both of you get 30% off your next mobile tire service. Share the savings and keep everyone on the road safely.
-          </p>
-          <Link
-            to="/contact"
-            className="inline-block bg-red-600 hover:bg-red-700 text-white px-8 py-3 rounded font-semibold transition"
-          >
-            Contact Us
-          </Link>
-        </div>
-      </section>
 
     </div>
   );

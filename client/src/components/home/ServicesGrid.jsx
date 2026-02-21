@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { FaArrowRight, FaOilCan, FaBolt, FaKey, FaGasPump, FaShieldAlt, FaWarehouse, FaTag, FaStar, FaCar, FaTruck, FaTools, FaWrench } from 'react-icons/fa';
 import { GiTireIronCross, GiCarWheel } from 'react-icons/gi';
+import xLogo from '../../assets/x.png';
 import service1 from '../../assets/services/service1.jpg';
 import service2 from '../../assets/services/service2.jpg';
 import service3 from '../../assets/services/service3.jpg';
@@ -125,7 +126,7 @@ const ServicesGrid = () => {
         {/* Section Header */}
         <div className="text-center mb-12">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <GiTireIronCross className="text-red-600 text-2xl" />
+            <img src={xLogo} alt="X" className="w-6 h-6 object-contain" />
             <span className="text-red-600 font-medium">What We Offer</span>
           </div>
           <h2 className="text-white text-3xl md:text-4xl lg:text-5xl font-bold mb-4">

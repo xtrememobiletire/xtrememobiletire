@@ -7,8 +7,7 @@ const navLinks = [
   { label: 'Home', to: '/' },
   { label: 'About Us', to: '/about' },
   { label: 'Services', to: '/services' },
-  { label: 'Booking', to: '/booking' },
-  { label: 'Shop', to: '/shop' },
+  { label: 'Booking', to: '/booknow' },
   { label: 'Contact Us', to: '/contact' },
 ];
 
@@ -51,7 +50,7 @@ const Navbar = () => {
             Sign In
           </Link>
           <Link
-            to="/contact"
+            to="/account"
             className="bg-red-600 hover:bg-red-700 text-white px-4 xl:px-6 py-2 xl:py-3 rounded font-semibold transition text-sm xl:text-base"
           >
             Sign Up

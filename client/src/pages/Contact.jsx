@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FaMapMarkerAlt, FaPhone, FaEnvelope, FaClock, FaFacebookF, FaTwitter, FaInstagram, FaYoutube } from 'react-icons/fa';
-import { GiTireIronCross } from 'react-icons/gi';
+import xLogo from '../assets/x.png';
 import slide2 from '../assets/slide2.jpg';
 
 const Contact = () => {
@@ -33,7 +33,7 @@ const Contact = () => {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-16">
         <div className="text-center mb-12">
           <div className="flex items-center justify-center gap-2 mb-2">
-            <GiTireIronCross className="text-red-600 text-xl" />
+            <img src={xLogo} alt="X" className="w-5 h-5 object-contain" />
             <span className="text-red-500 text-sm font-semibold uppercase tracking-widest">Get In Touch</span>
           </div>
           <h2 className="text-3xl sm:text-4xl font-extrabold">

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { GiTireIronCross } from 'react-icons/gi';
+import xLogo from '../../assets/x.png';
 import { FaCheck } from 'react-icons/fa';
 
 const PackagesSection = () => {
@@ -26,7 +26,7 @@ const PackagesSection = () => {
           {/* Left - Content */}
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <GiTireIronCross className="text-red-600 text-2xl" />
+              <img src={xLogo} alt="X" className="w-6 h-6 object-contain" />
               <span className="text-red-600 font-medium">Our Packages</span>
             </div>
             <h2 className="text-white text-3xl md:text-4xl lg:text-5xl font-bold mb-6 leading-tight">

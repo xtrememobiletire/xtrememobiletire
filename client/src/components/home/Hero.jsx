@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { GiTireIronCross } from 'react-icons/gi';
+import xLogo from '../../assets/x.png';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import xtremeVideo from '../../assets/xtremevideo.mp4';
 import slide2 from '../../assets/slide2.jpg';
@@ -130,9 +130,7 @@ const Hero = () => {
         <div className="w-full lg:w-1/2 lg:ml-auto text-center lg:text-left">
           {/* Badge */}
           <div className="flex items-center gap-2 mb-4 md:mb-6 justify-center lg:justify-start">
-            <div className="w-8 h-8 md:w-10 md:h-10 border-2 border-red-600 rounded-full flex items-center justify-center">
-              <GiTireIronCross className="text-red-600 text-lg md:text-xl" />
-            </div>
+            <img src={xLogo} alt="X" className="w-8 h-8 md:w-10 md:h-10 object-contain" />
             <span className="text-red-600 font-medium text-base md:text-lg">
               {slides[currentSlide].badge}
             </span>
