@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { FaEnvelope, FaLock, FaArrowRight } from 'react-icons/fa';
 import API from '../api';
+import logo from '../assets/xtrememobiletire.webp';
 
 const STATUS_COLORS = {
   pending:   'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
@@ -17,33 +18,95 @@ const Badge = ({ s }) => (
 
 const thCls = 'text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 py-3 border-b border-gray-800';
 const tdCls = 'px-4 py-3 text-sm text-gray-300 border-b border-gray-800/60';
+const inputCls = 'w-full bg-black border border-gray-700 focus:border-red-600 text-white placeholder-gray-600 px-4 py-3 rounded-lg text-sm outline-none transition';
+const labelCls = 'block text-gray-400 text-xs font-medium mb-1.5 uppercase tracking-wide';
 
+/* ── Admin Login Form ── */
+const AdminLogin = ({ onLogin }) => {
+  const [form, setForm] = useState({ email: '', password: '' });
+  const [status, setStatus] = useState({ loading: false, error: '' });
+  const handle = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setStatus({ loading: true, error: '' });
+    try {
+      const res = await API.post('/auth/login', form);
+      if (res.data.role !== 'admin') {
+        setStatus({ loading: false, error: 'Access denied. Admin accounts only.' });
+        return;
+      }
+      localStorage.setItem('xmt_token', res.data.token);
+      localStorage.setItem('xmt_role', res.data.role);
+      localStorage.setItem('xmt_name', res.data.name);
+      onLogin();
+    } catch (err) {
+      setStatus({ loading: false, error: err.response?.data?.message || 'Login failed.' });
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <img src={logo} alt="Xtreme Mobile Tire" className="h-16 w-auto mx-auto mb-4 object-contain" />
+          <p className="text-gray-500 text-sm mt-1">Sign in to access the dashboard</p>
+        </div>
+        <div className="bg-[#111] border border-gray-800 rounded-2xl p-8" style={{ boxShadow: '0 8px 40px 0 rgba(0,0,0,0.5)' }}>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className={labelCls}>Email Address *</label>
+              <div className="relative">
+                <FaEnvelope className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 text-sm" />
+                <input name="email" type="email" value={form.email} onChange={handle}
+                  placeholder="Email address" required
+                  className={`${inputCls} pl-10`} />
+              </div>
+            </div>
+            <div>
+              <label className={labelCls}>Password *</label>
+              <div className="relative">
+                <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 text-sm" />
+                <input name="password" type="password" value={form.password} onChange={handle}
+                  placeholder="••••••••" required
+                  className={`${inputCls} pl-10`} />
+              </div>
+            </div>
+            {status.error && <p className="text-red-400 text-sm text-center">{status.error}</p>}
+            <button type="submit" disabled={status.loading}
+              className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white font-bold py-3.5 rounded-lg transition tracking-wide uppercase text-sm flex items-center justify-center gap-2">
+              <FaArrowRight className="text-xs" /> {status.loading ? 'Signing In...' : 'Sign In'}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ── Admin Dashboard ── */
 export default function Admin() {
-  const navigate = useNavigate();
+  const [isAdmin, setIsAdmin] = useState(localStorage.getItem('xmt_role') === 'admin');
   const [tab, setTab] = useState('dashboard');
   const [stats, setStats] = useState(null);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Guard: only admin can access
+  // Load stats when logged in
   useEffect(() => {
-    if (localStorage.getItem('xmt_role') !== 'admin') navigate('/account');
-  }, [navigate]);
-
-  // Load stats on mount
-  useEffect(() => {
+    if (!isAdmin) return;
     API.get('/admin/stats').then(r => setStats(r.data)).catch(() => {});
-  }, []);
+  }, [isAdmin]);
 
   // Load tab data
   useEffect(() => {
-    if (tab === 'dashboard') return;
+    if (!isAdmin || tab === 'dashboard') return;
     setLoading(true);
     API.get(`/admin/${tab}`)
       .then(r => setData(r.data))
       .catch(() => setData([]))
       .finally(() => setLoading(false));
-  }, [tab]);
+  }, [tab, isAdmin]);
 
   const updateStatus = async (id, status) => {
     await API.patch(`/admin/${tab}/${id}`, { status });
@@ -67,8 +130,16 @@ export default function Admin() {
     localStorage.removeItem('xmt_token');
     localStorage.removeItem('xmt_role');
     localStorage.removeItem('xmt_name');
-    navigate('/account');
+    setIsAdmin(false);
+    setTab('dashboard');
+    setStats(null);
+    setData([]);
   };
+
+  // Show login form if not authenticated
+  if (!isAdmin) {
+    return <AdminLogin onLogin={() => setIsAdmin(true)} />;
+  }
 
   const TABS = [
     { key: 'dashboard', label: 'Dashboard' },
@@ -83,9 +154,8 @@ export default function Admin() {
 
       {/* Top Nav */}
       <header className="bg-[#111] border-b border-gray-800 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-red-600 rounded flex items-center justify-center font-black text-sm">X</div>
-          <span className="font-bold text-white">XMT Admin Panel</span>
+        <div className="flex items-center">
+          <img src={logo} alt="Xtreme Mobile Tire" className="h-9 w-auto object-contain" />
         </div>
         <button onClick={logout} className="text-xs text-gray-400 hover:text-red-400 transition border border-gray-700 hover:border-red-600 px-3 py-1.5 rounded">
           Logout

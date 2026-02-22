@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { FaTruck, FaUser, FaArrowRight, FaArrowLeft, FaEnvelope, FaLock } from 'react-icons/fa';
+import { Link } from 'react-router-dom';
+import { FaTruck, FaUser, FaArrowRight, FaArrowLeft } from 'react-icons/fa';
 import API from '../api';
 
 import fleet1 from '../assets/fleet/fleet1.webp';
@@ -16,7 +16,7 @@ const labelCls = 'block text-gray-400 text-xs font-medium mb-1.5 uppercase track
 const FleetForm = ({ onBack }) => {
   const [form, setForm] = useState({
     companyName: '', companyWebsite: '', companyEmail: '',
-    phone: '', address: '', vehicles: '', password: '',
+    phone: '', address: '', vehicles: '',
   });
   const [status, setStatus] = useState({ loading: false, success: '', error: '' });
   const handle = (e) => setForm({ ...form, [e.target.name]: e.target.value });
@@ -82,14 +82,6 @@ const FleetForm = ({ onBack }) => {
             <input name="vehicles" type="number" min="1" value={form.vehicles} onChange={handle}
               placeholder="e.g. 25" required className={inputCls} />
           </div>
-          <div>
-            <label className={labelCls}>Password *</label>
-            <div className="relative">
-              <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 text-sm" />
-              <input name="password" type="password" value={form.password} onChange={handle}
-                placeholder="••••••••" required className={`${inputCls} pl-10`} />
-            </div>
-          </div>
           {status.success && <p className="text-green-400 text-sm text-center">{status.success}</p>}
           {status.error && <p className="text-red-400 text-sm text-center">{status.error}</p>}
           <button type="submit" disabled={status.loading}
@@ -105,7 +97,7 @@ const FleetForm = ({ onBack }) => {
 /* ── Individual Sign-Up Form ── */
 const IndividualForm = ({ onBack }) => {
   const [form, setForm] = useState({
-    name: '', email: '', phone: '', website: '', vehicle: '', tireSize: '', password: '',
+    name: '', email: '', phone: '', website: '', vehicle: '', tireSize: '',
   });
   const [status, setStatus] = useState({ loading: false, success: '', error: '' });
   const handle = (e) => setForm({ ...form, [e.target.name]: e.target.value });
@@ -171,14 +163,6 @@ const IndividualForm = ({ onBack }) => {
             <input name="tireSize" value={form.tireSize} onChange={handle}
               placeholder="eg. 235/65R16" className={inputCls} />
           </div>
-          <div>
-            <label className={labelCls}>Password *</label>
-            <div className="relative">
-              <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 text-sm" />
-              <input name="password" type="password" value={form.password} onChange={handle}
-                placeholder="••••••••" required className={`${inputCls} pl-10`} />
-            </div>
-          </div>
           {status.success && <p className="text-green-400 text-sm text-center">{status.success}</p>}
           {status.error && <p className="text-red-400 text-sm text-center">{status.error}</p>}
           <button type="submit" disabled={status.loading}
@@ -186,76 +170,6 @@ const IndividualForm = ({ onBack }) => {
             <FaArrowRight className="text-xs" /> {status.loading ? 'Submitting...' : 'Submit Membership Request'}
           </button>
         </form>
-      </div>
-    </div>
-  );
-};
-
-/* ── Login Form ── */
-const LoginForm = ({ onBack }) => {
-  const [form, setForm] = useState({ email: '', password: '' });
-  const [status, setStatus] = useState({ loading: false, error: '' });
-  const navigate = useNavigate();
-  const handle = (e) => setForm({ ...form, [e.target.name]: e.target.value });
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setStatus({ loading: true, error: '' });
-    try {
-      const res = await API.post('/auth/login', form);
-      localStorage.setItem('xmt_token', res.data.token);
-      localStorage.setItem('xmt_role', res.data.role);
-      localStorage.setItem('xmt_name', res.data.name);
-      if (res.data.role === 'admin') navigate('/admin');
-    } catch (err) {
-      setStatus({ loading: false, error: err.response?.data?.message || 'Login failed.' });
-    }
-  };
-
-  return (
-    <div className="max-w-md mx-auto">
-      <button onClick={onBack} className="flex items-center gap-2 text-gray-400 hover:text-red-500 transition text-sm mb-6">
-        <FaArrowLeft /> Back to account types
-      </button>
-      <div className="bg-[#111] border border-gray-800 rounded-2xl p-8" style={{ boxShadow: '0 8px 40px 0 rgba(0,0,0,0.5)' }}>
-        <div className="text-center mb-6">
-          <div className="w-14 h-14 bg-red-600/15 border border-red-600/30 rounded-full flex items-center justify-center mx-auto mb-3">
-            <FaLock className="text-2xl text-red-500" />
-          </div>
-          <h3 className="text-white font-bold text-xl">Welcome Back</h3>
-          <p className="text-gray-500 text-xs mt-1">Sign in to your account</p>
-        </div>
-        <div className="border-t border-gray-800 mb-6" />
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className={labelCls}>Email Address *</label>
-            <div className="relative">
-              <FaEnvelope className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 text-sm" />
-              <input name="email" type="email" value={form.email} onChange={handle}
-                placeholder="john@email.com" required
-                className={`${inputCls} pl-10`} />
-            </div>
-          </div>
-          <div>
-            <label className={labelCls}>Password *</label>
-            <div className="relative">
-              <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 text-sm" />
-              <input name="password" type="password" value={form.password} onChange={handle}
-                placeholder="••••••••" required
-                className={`${inputCls} pl-10`} />
-            </div>
-          </div>
-          {status.error && <p className="text-red-400 text-sm text-center">{status.error}</p>}
-          <button type="submit" disabled={status.loading}
-            className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white font-bold py-3.5 rounded-lg transition tracking-wide uppercase text-sm flex items-center justify-center gap-2">
-            <FaArrowRight className="text-xs" /> {status.loading ? 'Signing In...' : 'Sign In'}
-          </button>
-        </form>
-        <p className="text-center text-gray-500 text-xs mt-5">
-          Don't have an account?{' '}
-          <button onClick={onBack} className="text-red-500 hover:text-red-400 transition font-medium">
-            Sign Up
-          </button>
-        </p>
       </div>
     </div>
   );
@@ -287,7 +201,7 @@ const cards = [
 
 /* ── Main Account Page ── */
 const Account = () => {
-  // view: 'cards' | 'fleet-signup' | 'individual-signup' | 'login'
+  // view: 'cards' | 'fleet-signup' | 'individual-signup'
   const [view, setView] = useState('cards');
 
   return (
@@ -364,18 +278,12 @@ const Account = () => {
                       ))}
                     </ul>
                     <div className="border-t border-white/8 mb-6" />
-                    <div className="flex gap-3 mt-auto">
+                    <div className="mt-auto">
                       <button
                         onClick={() => setView(card.type === 'Fleet' ? 'fleet-signup' : 'individual-signup')}
-                        className="flex-1 inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:scale-105 text-sm uppercase tracking-wide"
+                        className="w-full inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:scale-105 text-sm uppercase tracking-wide"
                       >
                         <FaArrowRight className="text-xs" /> Sign Up
-                      </button>
-                      <button
-                        onClick={() => setView('login')}
-                        className="flex-1 inline-flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-red-600/40 text-gray-300 hover:text-white font-semibold py-3 rounded-lg transition-all duration-300 text-sm uppercase tracking-wide"
-                      >
-                        Login
                       </button>
                     </div>
                   </div>
@@ -390,9 +298,6 @@ const Account = () => {
 
         {/* Individual Sign-Up */}
         {view === 'individual-signup' && <IndividualForm onBack={() => setView('cards')} />}
-
-        {/* Login */}
-        {view === 'login' && <LoginForm onBack={() => setView('cards')} />}
 
       </section>
     </div>
