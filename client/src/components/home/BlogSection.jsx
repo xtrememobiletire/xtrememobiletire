@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import xLogo from '../../assets/x.png';
-import { FaTruck, FaUser, FaArrowRight, FaTimes, FaLock } from 'react-icons/fa';
+import { FaTruck, FaUser, FaArrowRight, FaTimes } from 'react-icons/fa';
 import fleet1 from '../../assets/fleet/fleet1.webp';
 import member1 from '../../assets/member1.webp';
+import API from '../../api';
 
 const cards = [
   {
@@ -19,7 +20,6 @@ const cards = [
       'Weekly consolidated invoices',
     ],
     image: fleet1,
-    loginTo: '/account',
     accentFrom: 'from-red-700',
     accentTo: 'to-red-500',
   },
@@ -37,7 +37,6 @@ const cards = [
       'Seasonal tire change reminders',
     ],
     image: member1,
-    loginTo: '/account',
     accentFrom: 'from-red-800',
     accentTo: 'to-red-600',
   },
@@ -50,10 +49,21 @@ const labelCls = 'block text-gray-400 text-xs mb-1';
 const FleetForm = ({ onClose }) => {
   const [form, setForm] = useState({
     companyName: '', companyWebsite: '', companyEmail: '',
-    phone: '', address: '', vehicles: '', password: '',
+    phone: '', address: '', vehicles: '',
   });
+  const [status, setStatus] = useState({ loading: false, success: '', error: '' });
   const handle = (e) => setForm({ ...form, [e.target.name]: e.target.value });
-  const handleSubmit = (e) => { e.preventDefault(); onClose(); };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setStatus({ loading: true, success: '', error: '' });
+    try {
+      const res = await API.post('/fleet/register', form);
+      setStatus({ loading: false, success: res.data.message, error: '' });
+    } catch (err) {
+      setStatus({ loading: false, success: '', error: err.response?.data?.message || 'Something went wrong.' });
+    }
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -91,17 +101,11 @@ const FleetForm = ({ onClose }) => {
         <input name="vehicles" type="number" min="1" value={form.vehicles} onChange={handle}
           placeholder="e.g. 25" required className={inputCls} />
       </div>
-      <div>
-        <label className={labelCls}>Password *</label>
-        <div className="relative">
-          <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 text-sm" />
-          <input name="password" type="password" value={form.password} onChange={handle}
-            placeholder="••••••••" required className={`${inputCls} pl-10`} />
-        </div>
-      </div>
-      <button type="submit"
-        className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg transition tracking-wide text-sm uppercase">
-        Submit Fleet Registration
+      {status.success && <p className="text-green-400 text-sm text-center">{status.success}</p>}
+      {status.error && <p className="text-red-400 text-sm text-center">{status.error}</p>}
+      <button type="submit" disabled={status.loading}
+        className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white font-bold py-3 rounded-lg transition tracking-wide text-sm uppercase">
+        {status.loading ? 'Submitting...' : 'Submit Fleet Registration'}
       </button>
     </form>
   );
@@ -109,10 +113,21 @@ const FleetForm = ({ onClose }) => {
 
 const IndividualForm = ({ onClose }) => {
   const [form, setForm] = useState({
-    name: '', email: '', phone: '', website: '', vehicle: '', tireSize: '', password: '',
+    name: '', email: '', phone: '', website: '', vehicle: '', tireSize: '',
   });
+  const [status, setStatus] = useState({ loading: false, success: '', error: '' });
   const handle = (e) => setForm({ ...form, [e.target.name]: e.target.value });
-  const handleSubmit = (e) => { e.preventDefault(); onClose(); };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setStatus({ loading: true, success: '', error: '' });
+    try {
+      const res = await API.post('/members/register', form);
+      setStatus({ loading: false, success: res.data.message, error: '' });
+    } catch (err) {
+      setStatus({ loading: false, success: '', error: err.response?.data?.message || 'Something went wrong.' });
+    }
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -150,17 +165,11 @@ const IndividualForm = ({ onClose }) => {
         <input name="tireSize" value={form.tireSize} onChange={handle}
           placeholder="eg. 235/65R16" className={inputCls} />
       </div>
-      <div>
-        <label className={labelCls}>Password *</label>
-        <div className="relative">
-          <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 text-sm" />
-          <input name="password" type="password" value={form.password} onChange={handle}
-            placeholder="••••••••" required className={`${inputCls} pl-10`} />
-        </div>
-      </div>
-      <button type="submit"
-        className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg transition tracking-wide text-sm uppercase">
-        Submit Membership Request
+      {status.success && <p className="text-green-400 text-sm text-center">{status.success}</p>}
+      {status.error && <p className="text-red-400 text-sm text-center">{status.error}</p>}
+      <button type="submit" disabled={status.loading}
+        className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white font-bold py-3 rounded-lg transition tracking-wide text-sm uppercase">
+        {status.loading ? 'Submitting...' : 'Submit Membership Request'}
       </button>
     </form>
   );
@@ -244,20 +253,14 @@ const BlogSection = () => {
 
                 <div className="border-t border-white/8 mb-6" />
 
-                <div className="flex gap-3 mt-auto">
+                <div className="mt-auto">
                   <button
                     onClick={() => setActiveModal(card.type)}
-                    className="flex-1 inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:scale-105 text-sm uppercase tracking-wide"
+                    className="w-full inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg transition-all duration-300 hover:scale-105 text-sm uppercase tracking-wide"
                   >
                     <FaArrowRight className="text-xs" />
                     Sign Up
                   </button>
-                  <a
-                    href={card.loginTo}
-                    className="flex-1 inline-flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-red-600/40 text-gray-300 hover:text-white font-semibold py-3 rounded-lg transition-all duration-300 text-sm uppercase tracking-wide"
-                  >
-                    Login
-                  </a>
                 </div>
               </div>
             </div>
