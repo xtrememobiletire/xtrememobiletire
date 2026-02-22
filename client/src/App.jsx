@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import WhatsAppButton from './components/layout/WhatsAppButton';
@@ -12,6 +12,12 @@ import Account from './pages/Account';
 import Admin from './pages/Admin';
 import NotFound from './pages/NotFound';
 
+/* If admin is logged in, redirect any public page visit to /admin */
+const PublicRoute = ({ element }) => {
+  const isAdmin = localStorage.getItem('xmt_role') === 'admin';
+  return isAdmin ? <Navigate to="/admin" replace /> : element;
+};
+
 function Layout() {
   const { pathname } = useLocation();
   const isAdmin = pathname === '/admin';
@@ -20,13 +26,13 @@ function Layout() {
     <div className="min-h-screen">
       {!isAdmin && <Navbar />}
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/services" element={<Services />} />
-        <Route path="/contact" element={<Contact />} />
-        <Route path="/booknow" element={<Booking />} />
-        <Route path="/shop" element={<Shop />} />
-        <Route path="/account" element={<Account />} />
+        <Route path="/" element={<PublicRoute element={<Home />} />} />
+        <Route path="/about" element={<PublicRoute element={<About />} />} />
+        <Route path="/services" element={<PublicRoute element={<Services />} />} />
+        <Route path="/contact" element={<PublicRoute element={<Contact />} />} />
+        <Route path="/booknow" element={<PublicRoute element={<Booking />} />} />
+        <Route path="/shop" element={<PublicRoute element={<Shop />} />} />
+        <Route path="/account" element={<PublicRoute element={<Account />} />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="*" element={<NotFound />} />
       </Routes>

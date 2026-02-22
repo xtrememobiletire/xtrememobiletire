@@ -43,12 +43,7 @@ const Navbar = () => {
 
         {/* Desktop Auth Links */}
         <div className="hidden lg:flex items-center gap-4">
-          <Link
-            to="/account"
-            className="text-red-600 font-medium underline underline-offset-4 hover:text-red-400 transition text-sm xl:text-base"
-          >
-            Sign In
-          </Link>
+      
           <Link
             to="/account"
             className="bg-red-600 hover:bg-red-700 text-white px-4 xl:px-6 py-2 xl:py-3 rounded font-semibold transition text-sm xl:text-base"
@@ -85,13 +80,7 @@ const Navbar = () => {
 
             {/* Mobile Auth */}
             <div className="flex gap-3 mt-2">
-              <Link
-                to="/account"
-                onClick={() => setMobileMenu(false)}
-                className="flex-1 text-center text-red-600 font-medium underline underline-offset-4 hover:text-red-400 transition py-3"
-              >
-                Sign In
-              </Link>
+          
               <Link
                 to="/contact"
                 onClick={() => setMobileMenu(false)}
