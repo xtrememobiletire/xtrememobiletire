@@ -1,3 +1,4 @@
+import { Helmet } from 'react-helmet-async';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FaCalendarAlt, FaPhone, FaEnvelope, FaMapMarkerAlt, FaArrowRight } from 'react-icons/fa';
@@ -51,6 +52,11 @@ const Booking = () => {
 
   return (
     <div className="bg-black text-white min-h-screen">
+      <Helmet>
+        <title>Book a Service | Xtreme Mobile Tire</title>
+        <meta name="description" content="Book your mobile tire service with Xtreme Mobile Tire. Schedule a tire repair, replacement, or installation at your location today." />
+        <link rel="canonical" href="https://xtrememobiletire.com/booknow" />
+      </Helmet>
 
       {/* ── Hero ── */}
       <section

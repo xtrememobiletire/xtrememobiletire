@@ -1,3 +1,4 @@
+import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
 import { FaDollarSign, FaThumbsUp, FaStar, FaCheckCircle, FaArrowRight } from 'react-icons/fa';
 import slide2 from '../assets/slide2.jpg';
@@ -12,6 +13,11 @@ import fleet1 from '../assets/fleet/fleet1.webp';
 const About = () => {
   return (
     <div className="bg-black text-white">
+      <Helmet>
+        <title>About Us | Xtreme Mobile Tire</title>
+        <meta name="description" content="Learn about Xtreme Mobile Tire — who we are, our mission, and why customers trust us for mobile tire repair and replacement services." />
+        <link rel="canonical" href="https://xtrememobiletire.com/about" />
+      </Helmet>
 
       {/* ── Hero ── */}
       <section

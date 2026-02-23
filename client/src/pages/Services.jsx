@@ -1,3 +1,4 @@
+import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
 import { FaArrowRight, FaOilCan, FaBolt, FaKey, FaGasPump, FaShieldAlt, FaWarehouse, FaTag, FaStar, FaCar, FaTruck, FaTools, FaWrench, FaCheckCircle } from 'react-icons/fa';
 import { GiTireIronCross, GiCarWheel } from 'react-icons/gi';
@@ -45,6 +46,11 @@ const services = [
 const Services = () => {
   return (
     <div className="bg-black text-white">
+      <Helmet>
+        <title>Our Services | Xtreme Mobile Tire</title>
+        <meta name="description" content="Xtreme Mobile Tire offers tire repair, tire replacement, flat tire fix, tire installation, and more. We come to your location — fast and affordable." />
+        <link rel="canonical" href="https://xtrememobiletire.com/services" />
+      </Helmet>
 
       {/* ── Hero ── */}
       <section

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { GiTireIronCross } from 'react-icons/gi';
 import xLogo from '../../assets/x.png';
 import {
   FaTruck, FaShieldAlt, FaChartBar, FaFileInvoiceDollar, FaCheckCircle,
@@ -175,7 +174,7 @@ const FleetSection = () => {
               <ul className="space-y-3 mb-8">
                 {current.points.map((point, i) => (
                   <li key={i} className="flex items-start gap-3">
-                    <GiTireIronCross className="text-red-500 text-lg flex-shrink-0 mt-0.5" />
+                    <img src={xLogo} alt="x" className="w-5 h-5 flex-shrink-0 mt-0.5 object-contain" />
                     <span className="text-gray-300 text-sm leading-relaxed">{point}</span>
                   </li>
                 ))}
@@ -203,7 +202,7 @@ const FleetSection = () => {
             {/* CTA Button */}
             <div className="flex flex-col sm:flex-row gap-4 items-start">
               <Link
-                to="/contact"
+                to="/account"
                 className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-3.5 rounded-lg transition-all duration-300 hover:scale-105 text-sm uppercase tracking-wide"
               >
                 <FaTruck />

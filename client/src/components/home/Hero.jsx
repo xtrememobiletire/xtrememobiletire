@@ -38,7 +38,7 @@ const Hero = () => {
       subtitle: 'TIRE INSTALLATION',
       description: 'Experience the difference of premium tire installation and maintenance. We use state-of-the-art equipment and follow industry best practices for your safety.',
       buttonText: 'Book Now',
-      buttonLink: '/booking',
+      buttonLink: '/booknow',
     },
   ];
 

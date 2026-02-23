@@ -97,6 +97,9 @@ const Footer = () => {
           <p className="text-gray-500 text-xs">
             © 2026 Xtreme Mobile Tire. All Rights Reserved.
           </p>
+          <p className="text-gray-600 text-xs mt-1">
+            Created by Qasim Gardezi
+          </p>
         </div>
       </div>
     </footer>

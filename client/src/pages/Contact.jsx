@@ -1,3 +1,4 @@
+import { Helmet } from 'react-helmet-async';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FaMapMarkerAlt, FaPhone, FaEnvelope, FaClock, FaFacebookF, FaTwitter, FaInstagram, FaYoutube } from 'react-icons/fa';
@@ -25,6 +26,11 @@ const Contact = () => {
 
   return (
     <div className="bg-black text-white">
+      <Helmet>
+        <title>Contact Us | Xtreme Mobile Tire</title>
+        <meta name="description" content="Contact Xtreme Mobile Tire for mobile tire repair and replacement. Call us, email us, or fill out our contact form — we're here to help 24/7." />
+        <link rel="canonical" href="https://xtrememobiletire.com/contact" />
+      </Helmet>
 
       {/* ── Hero ── */}
       <section
