@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { FaBars, FaTimes } from 'react-icons/fa';
 import logo from '../../assets/xtrememobiletire.webp';
+import SignInModal from './SignInModal';
 
 const navLinks = [
   { label: 'Home', to: '/' },
@@ -13,7 +14,19 @@ const navLinks = [
 
 const Navbar = () => {
   const [mobileMenu, setMobileMenu] = useState(false);
+  const [showSignIn, setShowSignIn] = useState(false);
   const { pathname } = useLocation();
+  const navigate = useNavigate();
+
+  const isLoggedIn = !!localStorage.getItem('xmt_token');
+  const role = localStorage.getItem('xmt_role');
+
+  const handleLogout = () => {
+    localStorage.removeItem('xmt_token');
+    localStorage.removeItem('xmt_role');
+    localStorage.removeItem('xmt_name');
+    navigate('/');
+  };
 
   const isActive = (to) =>
     to === '/' ? pathname === '/' : pathname.startsWith(to);
@@ -43,13 +56,29 @@ const Navbar = () => {
 
         {/* Desktop Auth Links */}
         <div className="hidden lg:flex items-center gap-4">
-      
-          <Link
-            to="/account"
-            className="bg-red-600 hover:bg-red-700 text-white px-4 xl:px-6 py-2 xl:py-3 rounded font-semibold transition text-sm xl:text-base"
-          >
-            Sign Up
-          </Link>
+          {isLoggedIn ? (
+            <button
+              onClick={handleLogout}
+              className="text-red-500 underline font-semibold text-sm xl:text-base transition hover:text-red-400"
+            >
+              Sign Out
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowSignIn(true)}
+              className="text-red-500 underline font-semibold text-sm xl:text-base transition hover:text-red-400"
+            >
+              Sign In
+            </button>
+          )}
+          {!isLoggedIn && (
+            <Link
+              to="/account"
+              className="bg-red-600 hover:bg-red-700 text-white px-4 xl:px-6 py-2 xl:py-3 rounded font-semibold transition text-sm xl:text-base"
+            >
+              Sign Up
+            </Link>
+          )}
         </div>
 
         {/* Mobile Menu Button */}
@@ -80,18 +109,36 @@ const Navbar = () => {
 
             {/* Mobile Auth */}
             <div className="flex gap-3 mt-2">
-          
-              <Link
-                to="/contact"
-                onClick={() => setMobileMenu(false)}
-                className="flex-1 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded flex items-center justify-center font-semibold transition"
-              >
-                Sign Up
-              </Link>
+              {isLoggedIn ? (
+                <button
+                  onClick={() => { handleLogout(); setMobileMenu(false); }}
+                  className="flex-1 text-red-500 underline font-semibold py-3 text-center transition"
+                >
+                  Sign Out
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={() => { setShowSignIn(true); setMobileMenu(false); }}
+                    className="flex-1 text-red-500 underline font-semibold py-3 text-center transition"
+                  >
+                    Sign In
+                  </button>
+                  <Link
+                    to="/account"
+                    onClick={() => setMobileMenu(false)}
+                    className="flex-1 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded flex items-center justify-center font-semibold transition"
+                  >
+                    Sign Up
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>
       )}
+
+      {showSignIn && <SignInModal onClose={() => setShowSignIn(false)} />}
     </nav>
   );
 };

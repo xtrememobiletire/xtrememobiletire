@@ -11,12 +11,17 @@ import Booking from './pages/Booking';
 import Shop from './pages/Shop';
 import Account from './pages/Account';
 import Admin from './pages/Admin';
+import FleetDashboard from './pages/FleetDashboard';
+import MemberDashboard from './pages/MemberDashboard';
 import NotFound from './pages/NotFound';
 
-/* If admin is logged in, redirect any public page visit to /admin */
+/* Redirect logged-in users to their dashboard */
 const PublicRoute = ({ element }) => {
-  const isAdmin = localStorage.getItem('xmt_role') === 'admin';
-  return isAdmin ? <Navigate to="/admin" replace /> : element;
+  const role = localStorage.getItem('xmt_role');
+  if (role === 'admin') return <Navigate to="/admin" replace />;
+  if (role === 'fleet') return <Navigate to="/fleet-dashboard" replace />;
+  if (role === 'member') return <Navigate to="/member-dashboard" replace />;
+  return element;
 };
 
 function Layout() {
@@ -35,6 +40,8 @@ function Layout() {
         <Route path="/shop" element={<PublicRoute element={<Shop />} />} />
         <Route path="/account" element={<PublicRoute element={<Account />} />} />
         <Route path="/admin" element={<Admin />} />
+        <Route path="/fleet-dashboard" element={<FleetDashboard />} />
+        <Route path="/member-dashboard" element={<MemberDashboard />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       {!isAdmin && <Footer />}

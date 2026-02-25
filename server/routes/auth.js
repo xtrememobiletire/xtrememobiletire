@@ -45,4 +45,31 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// GET /api/auth/me  — returns current user profile from token
+router.get('/me', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ message: 'No token.' });
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    if (decoded.role === 'fleet') {
+      const user = await Fleet.findById(decoded.id).select('-password');
+      if (!user) return res.status(404).json({ message: 'User not found.' });
+      return res.json({ ...user.toObject(), role: 'fleet' });
+    }
+    if (decoded.role === 'member') {
+      const user = await Member.findById(decoded.id).select('-password');
+      if (!user) return res.status(404).json({ message: 'User not found.' });
+      return res.json({ ...user.toObject(), role: 'member' });
+    }
+    if (decoded.role === 'admin') {
+      return res.json({ role: 'admin', name: 'Admin', email: decoded.email });
+    }
+    return res.status(401).json({ message: 'Invalid token.' });
+  } catch (err) {
+    res.status(401).json({ message: 'Invalid or expired token.' });
+  }
+});
+
 module.exports = router;

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FaEnvelope, FaLock, FaArrowRight } from 'react-icons/fa';
+import { FaEnvelope, FaLock, FaArrowRight, FaEye, FaEyeSlash } from 'react-icons/fa';
 import API from '../api';
 import logo from '../assets/xtrememobiletire.webp';
 
@@ -24,6 +24,7 @@ const labelCls = 'block text-gray-400 text-xs font-medium mb-1.5 uppercase track
 /* ── Admin Login Form ── */
 const AdminLogin = ({ onLogin }) => {
   const [form, setForm] = useState({ email: '', password: '' });
+  const [showPassword, setShowPassword] = useState(false);
   const [status, setStatus] = useState({ loading: false, error: '' });
   const handle = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -67,9 +68,13 @@ const AdminLogin = ({ onLogin }) => {
               <label className={labelCls}>Password *</label>
               <div className="relative">
                 <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 text-sm" />
-                <input name="password" type="password" value={form.password} onChange={handle}
+                <input name="password" type={showPassword ? 'text' : 'password'} value={form.password} onChange={handle}
                   placeholder="••••••••" required
-                  className={`${inputCls} pl-10`} />
+                  className={`${inputCls} pl-10 pr-10`} />
+                <button type="button" onClick={() => setShowPassword(p => !p)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-red-500 transition">
+                  {showPassword ? <FaEyeSlash /> : <FaEye />}
+                </button>
               </div>
             </div>
             {status.error && <p className="text-red-400 text-sm text-center">{status.error}</p>}

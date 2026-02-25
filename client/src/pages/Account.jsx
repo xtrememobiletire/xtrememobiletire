@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FaTruck, FaUser, FaArrowRight, FaArrowLeft } from 'react-icons/fa';
+import { FaTruck, FaUser, FaArrowRight, FaArrowLeft, FaEye, FaEyeSlash } from 'react-icons/fa';
 import API from '../api';
 
 import fleet1 from '../assets/fleet/fleet1.webp';
@@ -16,15 +16,19 @@ const labelCls = 'block text-gray-400 text-xs font-medium mb-1.5 uppercase track
 const FleetForm = ({ onBack }) => {
   const [form, setForm] = useState({
     companyName: '', companyWebsite: '', companyEmail: '',
-    phone: '', address: '', vehicles: '',
+    phone: '', address: '', vehicles: '', password: '', confirmPassword: '',
   });
+  const [show, setShow] = useState({ password: false, confirmPassword: false });
   const [status, setStatus] = useState({ loading: false, success: '', error: '' });
   const handle = (e) => setForm({ ...form, [e.target.name]: e.target.value });
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (form.password !== form.confirmPassword)
+      return setStatus({ loading: false, success: '', error: 'Passwords do not match.' });
     setStatus({ loading: true, success: '', error: '' });
     try {
-      const res = await API.post('/fleet/register', form);
+      const { confirmPassword, ...payload } = form;
+      const res = await API.post('/fleet/register', payload);
       setStatus({ loading: false, success: res.data.message, error: '' });
     } catch (err) {
       setStatus({ loading: false, success: '', error: err.response?.data?.message || 'Something went wrong.' });
@@ -82,6 +86,30 @@ const FleetForm = ({ onBack }) => {
             <input name="vehicles" type="number" min="1" value={form.vehicles} onChange={handle}
               placeholder="e.g. 25" required className={inputCls} />
           </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div>
+              <label className={labelCls}>Password *</label>
+              <div className="relative">
+                <input name="password" type={show.password ? 'text' : 'password'} value={form.password} onChange={handle}
+                  placeholder="Create a password" required className={`${inputCls} pr-10`} />
+                <button type="button" onClick={() => setShow(s => ({ ...s, password: !s.password }))}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-red-500 transition">
+                  {show.password ? <FaEyeSlash /> : <FaEye />}
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className={labelCls}>Confirm Password *</label>
+              <div className="relative">
+                <input name="confirmPassword" type={show.confirmPassword ? 'text' : 'password'} value={form.confirmPassword} onChange={handle}
+                  placeholder="Repeat your password" required className={`${inputCls} pr-10`} />
+                <button type="button" onClick={() => setShow(s => ({ ...s, confirmPassword: !s.confirmPassword }))}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-red-500 transition">
+                  {show.confirmPassword ? <FaEyeSlash /> : <FaEye />}
+                </button>
+              </div>
+            </div>
+          </div>
           {status.success && <p className="text-green-400 text-sm text-center">{status.success}</p>}
           {status.error && <p className="text-red-400 text-sm text-center">{status.error}</p>}
           <button type="submit" disabled={status.loading}
@@ -97,15 +125,19 @@ const FleetForm = ({ onBack }) => {
 /* ── Individual Sign-Up Form ── */
 const IndividualForm = ({ onBack }) => {
   const [form, setForm] = useState({
-    name: '', email: '', phone: '', website: '', vehicle: '', tireSize: '',
+    name: '', email: '', phone: '', website: '', vehicle: '', tireSize: '', password: '', confirmPassword: '',
   });
+  const [show, setShow] = useState({ password: false, confirmPassword: false });
   const [status, setStatus] = useState({ loading: false, success: '', error: '' });
   const handle = (e) => setForm({ ...form, [e.target.name]: e.target.value });
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (form.password !== form.confirmPassword)
+      return setStatus({ loading: false, success: '', error: 'Passwords do not match.' });
     setStatus({ loading: true, success: '', error: '' });
     try {
-      const res = await API.post('/members/register', form);
+      const { confirmPassword, ...payload } = form;
+      const res = await API.post('/members/register', payload);
       setStatus({ loading: false, success: res.data.message, error: '' });
     } catch (err) {
       setStatus({ loading: false, success: '', error: err.response?.data?.message || 'Something went wrong.' });
@@ -162,6 +194,30 @@ const IndividualForm = ({ onBack }) => {
             <label className={labelCls}>Tire Size <span className="text-gray-600 normal-case tracking-normal">(optional)</span></label>
             <input name="tireSize" value={form.tireSize} onChange={handle}
               placeholder="eg. 235/65R16" className={inputCls} />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div>
+              <label className={labelCls}>Password *</label>
+              <div className="relative">
+                <input name="password" type={show.password ? 'text' : 'password'} value={form.password} onChange={handle}
+                  placeholder="Create a password" required className={`${inputCls} pr-10`} />
+                <button type="button" onClick={() => setShow(s => ({ ...s, password: !s.password }))}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-red-500 transition">
+                  {show.password ? <FaEyeSlash /> : <FaEye />}
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className={labelCls}>Confirm Password *</label>
+              <div className="relative">
+                <input name="confirmPassword" type={show.confirmPassword ? 'text' : 'password'} value={form.confirmPassword} onChange={handle}
+                  placeholder="Repeat your password" required className={`${inputCls} pr-10`} />
+                <button type="button" onClick={() => setShow(s => ({ ...s, confirmPassword: !s.confirmPassword }))}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-red-500 transition">
+                  {show.confirmPassword ? <FaEyeSlash /> : <FaEye />}
+                </button>
+              </div>
+            </div>
           </div>
           {status.success && <p className="text-green-400 text-sm text-center">{status.success}</p>}
           {status.error && <p className="text-red-400 text-sm text-center">{status.error}</p>}
