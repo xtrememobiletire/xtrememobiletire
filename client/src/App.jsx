@@ -13,6 +13,8 @@ import Account from './pages/Account';
 import Admin from './pages/Admin';
 import FleetDashboard from './pages/FleetDashboard';
 import MemberDashboard from './pages/MemberDashboard';
+import FleetSignup from './pages/FleetSignup';
+import MemberSignup from './pages/MemberSignup';
 import NotFound from './pages/NotFound';
 
 /* Redirect logged-in users to their dashboard */
@@ -39,6 +41,8 @@ function Layout() {
         <Route path="/booknow" element={<PublicRoute element={<Booking />} />} />
         <Route path="/shop" element={<PublicRoute element={<Shop />} />} />
         <Route path="/account" element={<PublicRoute element={<Account />} />} />
+        <Route path="/account/fleet" element={<PublicRoute element={<FleetSignup />} />} />
+        <Route path="/account/membership" element={<PublicRoute element={<MemberSignup />} />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/fleet-dashboard" element={<FleetDashboard />} />
         <Route path="/member-dashboard" element={<MemberDashboard />} />

@@ -11,7 +11,10 @@ router.post('/register', async (req, res) => {
     const existing = await Member.findOne({ email: email.toLowerCase() });
     if (existing) return res.status(400).json({ message: 'This email is already registered.' });
 
-    const member = new Member({ name, email, phone, website, vehicle, tireSize, password });
+    const last = await Member.findOne({}, { memberId: 1 }).sort({ memberId: -1 });
+    const memberId = last?.memberId ? last.memberId + 1 : 5124;
+
+    const member = new Member({ memberId, name, email, phone, website, vehicle, tireSize, password });
     await member.save();
 
     res.status(201).json({ message: 'Membership request submitted! We will review and contact you shortly.' });

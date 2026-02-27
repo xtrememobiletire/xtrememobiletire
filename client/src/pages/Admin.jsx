@@ -311,7 +311,7 @@ export default function Admin() {
                   <table className="w-full min-w-[800px]">
                     <thead>
                       <tr>
-                        {['Company','Email','Phone','Address','Vehicles','Status','Actions'].map(h => (
+                        {['Fleet ID','Company','Email','Phone','Address','Vehicles','Status','Actions'].map(h => (
                           <th key={h} className={thCls}>{h}</th>
                         ))}
                       </tr>
@@ -319,6 +319,9 @@ export default function Admin() {
                     <tbody>
                       {data.map(f => (
                         <tr key={f._id} className="hover:bg-white/2">
+                          <td className={tdCls}>
+                            <span className="font-mono font-bold text-red-400">#{f.fleetId ?? '—'}</span>
+                          </td>
                           <td className={tdCls}>
                             <div>{f.companyName}</div>
                             {f.companyWebsite && <a href={f.companyWebsite} target="_blank" rel="noreferrer" className="text-xs text-red-400 hover:underline">{f.companyWebsite}</a>}
@@ -337,7 +340,7 @@ export default function Admin() {
                           </td>
                         </tr>
                       ))}
-                      {!data.length && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-600">No fleet signups yet.</td></tr>}
+                      {!data.length && <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-600">No fleet signups yet.</td></tr>}
                     </tbody>
                   </table>
                 </div>
@@ -354,7 +357,7 @@ export default function Admin() {
                   <table className="w-full min-w-[750px]">
                     <thead>
                       <tr>
-                        {['Name','Email','Phone','Vehicle','Tire Size','Status','Actions'].map(h => (
+                        {['Member ID','Name','Email','Phone','Vehicle','Tire Size','Status','Actions'].map(h => (
                           <th key={h} className={thCls}>{h}</th>
                         ))}
                       </tr>
@@ -362,6 +365,9 @@ export default function Admin() {
                     <tbody>
                       {data.map(m => (
                         <tr key={m._id} className="hover:bg-white/2">
+                          <td className={tdCls}>
+                            <span className="font-mono font-bold text-red-400">XMT-{m.memberId ?? '—'}</span>
+                          </td>
                           <td className={tdCls}>{m.name}</td>
                           <td className={tdCls}>{m.email}</td>
                           <td className={tdCls}>{m.phone}</td>
@@ -377,7 +383,7 @@ export default function Admin() {
                           </td>
                         </tr>
                       ))}
-                      {!data.length && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-600">No members yet.</td></tr>}
+                      {!data.length && <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-600">No members yet.</td></tr>}
                     </tbody>
                   </table>
                 </div>

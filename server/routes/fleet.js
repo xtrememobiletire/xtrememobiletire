@@ -11,7 +11,10 @@ router.post('/register', async (req, res) => {
     const existing = await Fleet.findOne({ companyEmail: companyEmail.toLowerCase() });
     if (existing) return res.status(400).json({ message: 'This email is already registered.' });
 
-    const fleet = new Fleet({ companyName, companyEmail, phone, address, vehicles: Number(vehicles), companyWebsite });
+    const last = await Fleet.findOne({}, { fleetId: 1 }).sort({ fleetId: -1 });
+    const fleetId = last?.fleetId ? last.fleetId + 1 : 5124;
+
+    const fleet = new Fleet({ fleetId, companyName, companyEmail, phone, address, vehicles: Number(vehicles), companyWebsite });
     await fleet.save();
 
     res.status(201).json({ message: 'Fleet registration submitted! We will review and contact you shortly.' });

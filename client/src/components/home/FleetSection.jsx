@@ -202,7 +202,7 @@ const FleetSection = () => {
             {/* CTA Button */}
             <div className="flex flex-col sm:flex-row gap-4 items-start">
               <Link
-                to="/account"
+                to="/account/fleet"
                 className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-3.5 rounded-lg transition-all duration-300 hover:scale-105 text-sm uppercase tracking-wide"
               >
                 <FaTruck />

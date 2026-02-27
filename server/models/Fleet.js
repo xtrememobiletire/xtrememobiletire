@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const FleetSchema = new mongoose.Schema({
+  fleetId:        { type: Number, unique: true },
   companyName:    { type: String, required: true },
   companyWebsite: { type: String, default: '' },
   companyEmail:   { type: String, required: true, unique: true, lowercase: true },
