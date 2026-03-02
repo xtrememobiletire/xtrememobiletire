@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FaEnvelope, FaLock, FaArrowRight, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FaEnvelope, FaLock, FaArrowRight, FaEye, FaEyeSlash, FaCheck, FaTimes, FaCar, FaTrash } from 'react-icons/fa';
 import API from '../api';
 import logo from '../assets/xtrememobiletire.webp';
 
@@ -97,6 +97,31 @@ export default function Admin() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // Vehicle modal
+  const [vehicleModal,      setVehicleModal]      = useState(null); // { name, userId }
+  const [vehicleModalData,  setVehicleModalData]  = useState([]);
+  const [vehicleModalLoading, setVehicleModalLoading] = useState(false);
+
+  const openVehicleModal = async (name, userId) => {
+    setVehicleModal({ name, userId });
+    setVehicleModalData([]);
+    setVehicleModalLoading(true);
+    try {
+      const res = await API.get(`/admin/vehicles/${userId}`);
+      setVehicleModalData(res.data);
+    } catch { setVehicleModalData([]); }
+    finally { setVehicleModalLoading(false); }
+  };
+
+  // Status management
+  const [allStatuses,    setAllStatuses]    = useState([]);
+  const [showStatusModal,setShowStatusModal]= useState(false);
+  const [newStatusLabel, setNewStatusLabel] = useState('');
+  const [statusAdding,   setStatusAdding]   = useState(false);
+
+  const loadStatuses = () =>
+    API.get('/admin/custom-statuses').then(r => setAllStatuses(r.data)).catch(() => {});
+
   // Load stats when logged in
   useEffect(() => {
     if (!isAdmin) return;
@@ -111,7 +136,27 @@ export default function Admin() {
       .then(r => setData(r.data))
       .catch(() => setData([]))
       .finally(() => setLoading(false));
+    if (tab === 'service-requests') loadStatuses();
   }, [tab, isAdmin]);
+
+  const handleAddStatus = async () => {
+    if (!newStatusLabel.trim()) return;
+    setStatusAdding(true);
+    try {
+      const res = await API.post('/admin/custom-statuses', { label: newStatusLabel.trim() });
+      setAllStatuses(prev => [...prev, res.data]);
+      setNewStatusLabel('');
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to add status.');
+    } finally {
+      setStatusAdding(false);
+    }
+  };
+
+  const handleDeleteStatus = async (id) => {
+    await API.delete(`/admin/custom-statuses/${id}`);
+    setAllStatuses(prev => prev.filter(s => s._id !== id));
+  };
 
   const updateStatus = async (id, status) => {
     await API.patch(`/admin/${tab}/${id}`, { status });
@@ -147,11 +192,12 @@ export default function Admin() {
   }
 
   const TABS = [
-    { key: 'dashboard', label: 'Dashboard' },
-    { key: 'bookings',  label: 'Bookings' },
-    { key: 'contacts',  label: 'Messages' },
-    { key: 'fleets',    label: 'Fleet Signups' },
-    { key: 'members',   label: 'Members' },
+    { key: 'dashboard',        label: 'Dashboard' },
+    { key: 'bookings',         label: 'Bookings' },
+    { key: 'contacts',         label: 'Messages' },
+    { key: 'fleets',           label: 'Fleet Signups' },
+    { key: 'members',          label: 'Members' },
+    { key: 'service-requests', label: 'Services' },
   ];
 
   return (
@@ -193,6 +239,9 @@ export default function Admin() {
                 {t.key === 'members' && stats?.pendingMembers > 0 && (
                   <span className="ml-2 bg-red-600 text-white text-xs px-1.5 py-0.5 rounded-full">{stats.pendingMembers}</span>
                 )}
+                {t.key === 'service-requests' && stats?.pendingServices > 0 && (
+                  <span className="ml-2 bg-red-600 text-white text-xs px-1.5 py-0.5 rounded-full">{stats.pendingServices}</span>
+                )}
               </button>
             ))}
           </nav>
@@ -207,10 +256,11 @@ export default function Admin() {
               <h2 className="text-2xl font-bold mb-6">Dashboard</h2>
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                  { label: 'Total Bookings', value: stats?.bookings, pending: stats?.pendingBookings, color: 'border-blue-600' },
-                  { label: 'Messages', value: stats?.contacts, pending: stats?.unreadContacts, color: 'border-purple-600' },
-                  { label: 'Fleet Signups', value: stats?.fleets, pending: stats?.pendingFleets, color: 'border-orange-600' },
-                  { label: 'Members', value: stats?.members, pending: stats?.pendingMembers, color: 'border-green-600' },
+                  { label: 'Total Bookings',    value: stats?.bookings,        pending: stats?.pendingBookings,  color: 'border-blue-600' },
+                  { label: 'Messages',          value: stats?.contacts,        pending: stats?.unreadContacts,   color: 'border-purple-600' },
+                  { label: 'Fleet Signups',     value: stats?.fleets,          pending: stats?.pendingFleets,    color: 'border-orange-600' },
+                  { label: 'Members',           value: stats?.members,         pending: stats?.pendingMembers,   color: 'border-green-600' },
+                  { label: 'Service Requests',  value: stats?.serviceRequests, pending: stats?.pendingServices,  color: 'border-red-600' },
                 ].map(card => (
                   <div key={card.label} className={`bg-[#111] border-l-4 ${card.color} border border-gray-800 rounded-xl p-5`}>
                     <p className="text-gray-400 text-xs uppercase tracking-wide mb-1">{card.label}</p>
@@ -311,7 +361,7 @@ export default function Admin() {
                   <table className="w-full min-w-[800px]">
                     <thead>
                       <tr>
-                        {['Fleet ID','Company','Email','Phone','Address','Vehicles','Status','Actions'].map(h => (
+                        {['Fleet ID','Company','Email','Phone','Address','No. of Vehicles','Status','Actions'].map(h => (
                           <th key={h} className={thCls}>{h}</th>
                         ))}
                       </tr>
@@ -320,7 +370,7 @@ export default function Admin() {
                       {data.map(f => (
                         <tr key={f._id} className="hover:bg-white/2">
                           <td className={tdCls}>
-                            <span className="font-mono font-bold text-red-400">#{f.fleetId ?? '—'}</span>
+                            <span className="font-mono font-bold text-red-400">XMT-{f.fleetId ?? '—'}</span>
                           </td>
                           <td className={tdCls}>
                             <div>{f.companyName}</div>
@@ -329,13 +379,30 @@ export default function Admin() {
                           <td className={tdCls}>{f.companyEmail}</td>
                           <td className={tdCls}>{f.phone}</td>
                           <td className={tdCls}>{f.address}</td>
-                          <td className={tdCls}>{f.vehicles}</td>
+                          <td className={tdCls}>{f.vehicleCount ?? 0}</td>
                           <td className={tdCls}><Badge s={f.status} /></td>
                           <td className={tdCls}>
-                            <div className="flex gap-1 flex-wrap">
-                              {f.status !== 'approved' && <button onClick={() => updateStatus(f._id, 'approved')} className="text-xs bg-green-600 hover:bg-green-700 px-2 py-1 rounded">Approve</button>}
-                              {f.status !== 'rejected' && <button onClick={() => updateStatus(f._id, 'rejected')} className="text-xs bg-gray-600 hover:bg-gray-700 px-2 py-1 rounded">Reject</button>}
-                              <button onClick={() => deleteItem(f._id)} className="text-xs bg-red-600/80 hover:bg-red-700 px-2 py-1 rounded">Delete</button>
+                            <div className="flex gap-1.5 items-center">
+                              {f.status !== 'approved' && (
+                                <button onClick={() => updateStatus(f._id, 'approved')} title="Approve"
+                                  className="w-7 h-7 flex items-center justify-center bg-green-600 hover:bg-green-700 rounded transition">
+                                  <FaCheck className="text-white text-xs" />
+                                </button>
+                              )}
+                              {f.status !== 'rejected' && (
+                                <button onClick={() => updateStatus(f._id, 'rejected')} title="Reject"
+                                  className="w-7 h-7 flex items-center justify-center bg-gray-600 hover:bg-gray-700 rounded transition">
+                                  <FaTimes className="text-white text-xs" />
+                                </button>
+                              )}
+                              <button onClick={() => openVehicleModal(f.companyName, f._id)} title="View Vehicles"
+                                className="w-7 h-7 flex items-center justify-center bg-blue-600/80 hover:bg-blue-700 rounded transition">
+                                <FaCar className="text-white text-xs" />
+                              </button>
+                              <button onClick={() => deleteItem(f._id)} title="Delete"
+                                className="w-7 h-7 flex items-center justify-center bg-red-600/80 hover:bg-red-700 rounded transition">
+                                <FaTrash className="text-white text-xs" />
+                              </button>
                             </div>
                           </td>
                         </tr>
@@ -357,7 +424,7 @@ export default function Admin() {
                   <table className="w-full min-w-[750px]">
                     <thead>
                       <tr>
-                        {['Member ID','Name','Email','Phone','Vehicle','Tire Size','Status','Actions'].map(h => (
+                        {['Member ID','Name','Email','Phone','Vehicles','Status','Actions'].map(h => (
                           <th key={h} className={thCls}>{h}</th>
                         ))}
                       </tr>
@@ -371,14 +438,30 @@ export default function Admin() {
                           <td className={tdCls}>{m.name}</td>
                           <td className={tdCls}>{m.email}</td>
                           <td className={tdCls}>{m.phone}</td>
-                          <td className={tdCls}>{m.vehicle}</td>
-                          <td className={tdCls}>{m.tireSize || '—'}</td>
+                          <td className={tdCls}><span className="font-bold text-white">{m.vehicleCount ?? 0}</span></td>
                           <td className={tdCls}><Badge s={m.status} /></td>
                           <td className={tdCls}>
-                            <div className="flex gap-1 flex-wrap">
-                              {m.status !== 'approved' && <button onClick={() => updateStatus(m._id, 'approved')} className="text-xs bg-green-600 hover:bg-green-700 px-2 py-1 rounded">Approve</button>}
-                              {m.status !== 'rejected' && <button onClick={() => updateStatus(m._id, 'rejected')} className="text-xs bg-gray-600 hover:bg-gray-700 px-2 py-1 rounded">Reject</button>}
-                              <button onClick={() => deleteItem(m._id)} className="text-xs bg-red-600/80 hover:bg-red-700 px-2 py-1 rounded">Delete</button>
+                            <div className="flex gap-1.5 items-center">
+                              {m.status !== 'approved' && (
+                                <button onClick={() => updateStatus(m._id, 'approved')} title="Approve"
+                                  className="w-7 h-7 flex items-center justify-center bg-green-600 hover:bg-green-700 rounded transition">
+                                  <FaCheck className="text-white text-xs" />
+                                </button>
+                              )}
+                              {m.status !== 'rejected' && (
+                                <button onClick={() => updateStatus(m._id, 'rejected')} title="Reject"
+                                  className="w-7 h-7 flex items-center justify-center bg-gray-600 hover:bg-gray-700 rounded transition">
+                                  <FaTimes className="text-white text-xs" />
+                                </button>
+                              )}
+                              <button onClick={() => openVehicleModal(m.name, m._id)} title="View Vehicles"
+                                className="w-7 h-7 flex items-center justify-center bg-blue-600/80 hover:bg-blue-700 rounded transition">
+                                <FaCar className="text-white text-xs" />
+                              </button>
+                              <button onClick={() => deleteItem(m._id)} title="Delete"
+                                className="w-7 h-7 flex items-center justify-center bg-red-600/80 hover:bg-red-700 rounded transition">
+                                <FaTrash className="text-white text-xs" />
+                              </button>
                             </div>
                           </td>
                         </tr>
@@ -391,8 +474,204 @@ export default function Admin() {
             </div>
           )}
 
+          {/* Service Requests */}
+          {tab === 'service-requests' && (
+            <div>
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+                <h2 className="text-2xl font-bold">Service Requests ({data.length})</h2>
+                <button
+                  onClick={() => { setShowStatusModal(true); setNewStatusLabel(''); }}
+                  className="flex items-center gap-1.5 text-xs bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition font-semibold"
+                >
+                  <span className="text-base leading-none">+</span> Custom Status
+                </button>
+              </div>
+
+              {/* Requests Table */}
+              {loading ? <p className="text-gray-500">Loading...</p> : (
+                <div className="bg-[#111] border border-gray-800 rounded-xl overflow-x-auto">
+                  <table className="w-full min-w-[800px]">
+                    <thead>
+                      <tr>
+                        {['Name', 'Type', 'Email', 'Vehicle', 'Service', 'Date & Time', 'Status', 'Actions'].map(h => (
+                          <th key={h} className={thCls}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.map(req => (
+                        <tr key={req._id} className="hover:bg-white/2">
+                          <td className={tdCls}>{req.userName}</td>
+                          <td className={tdCls}>
+                            <span className={`text-xs px-2 py-0.5 rounded border capitalize ${
+                              req.userType === 'fleet'
+                                ? 'bg-orange-500/20 text-orange-400 border-orange-500/30'
+                                : 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+                            }`}>{req.userType}</span>
+                          </td>
+                          <td className={tdCls}>{req.userEmail}</td>
+                          <td className={tdCls}>{req.vehicle || '—'}</td>
+                          <td className={tdCls}>{req.service}</td>
+                          <td className={tdCls}>
+                            {req.appointmentDate
+                              ? new Date(req.appointmentDate).toLocaleString('en-US', {
+                                  month: 'short', day: 'numeric', year: 'numeric',
+                                  hour: '2-digit', minute: '2-digit',
+                                })
+                              : '—'}
+                          </td>
+                          <td className={tdCls}>
+                            <select
+                              value={req.status}
+                              onChange={e => updateStatus(req._id, e.target.value)}
+                              className="bg-[#0a0a0a] border border-gray-700 text-gray-300 text-xs rounded-lg px-2 py-1.5 outline-none focus:border-red-600 transition cursor-pointer"
+                            >
+                              {allStatuses.map(s => (
+                                <option key={s._id} value={s.label}>{s.label}</option>
+                              ))}
+                            </select>
+                          </td>
+                          <td className={tdCls}>
+                            <button
+                              onClick={() => deleteItem(req._id)}
+                              className="text-xs bg-red-600/80 hover:bg-red-700 px-2 py-1 rounded"
+                            >Delete</button>
+                          </td>
+                        </tr>
+                      ))}
+                      {!data.length && (
+                        <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-600">No service requests yet.</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* ── Status Modal ── */}
+              {showStatusModal && (
+                <div
+                  className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                  style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}
+                  onClick={e => { if (e.target === e.currentTarget) setShowStatusModal(false); }}
+                >
+                  <div className="bg-[#111] border border-gray-800 rounded-2xl w-full max-w-md p-6"
+                    style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.7)' }}>
+
+                    {/* Modal header */}
+                    <div className="flex items-center justify-between mb-5">
+                      <h3 className="text-white font-bold text-lg">Manage Statuses</h3>
+                      <button
+                        onClick={() => setShowStatusModal(false)}
+                        className="text-gray-500 hover:text-red-400 transition text-xl leading-none"
+                      >×</button>
+                    </div>
+
+                    {/* All statuses list */}
+                    <div className="space-y-2 mb-5 max-h-64 overflow-y-auto pr-1">
+                      {allStatuses.length === 0 && (
+                        <p className="text-gray-600 text-sm text-center py-4">No statuses yet.</p>
+                      )}
+                      {allStatuses.map(s => (
+                        <div key={s._id} className="flex items-center justify-between bg-[#0a0a0a] border border-gray-800 rounded-lg px-4 py-2.5">
+                          <span className="text-gray-300 text-sm">{s.label}</span>
+                          <button
+                            onClick={() => handleDeleteStatus(s._id)}
+                            className="text-xs bg-red-600/80 hover:bg-red-700 text-white px-2.5 py-1 rounded transition ml-3"
+                          >Delete</button>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Add new status */}
+                    <div className="border-t border-gray-800 pt-4">
+                      <p className="text-gray-500 text-xs uppercase tracking-wide mb-2">Add New Status</p>
+                      <div className="flex gap-2">
+                        <input
+                          value={newStatusLabel}
+                          onChange={e => setNewStatusLabel(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && handleAddStatus()}
+                          placeholder="Status name…"
+                          autoFocus
+                          className="flex-1 bg-black border border-gray-700 focus:border-red-600 text-white placeholder-gray-600 px-3 py-2 rounded-lg text-sm outline-none transition"
+                        />
+                        <button
+                          onClick={handleAddStatus}
+                          disabled={statusAdding}
+                          className="bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white text-xs font-bold px-4 py-2 rounded-lg transition"
+                        >
+                          {statusAdding ? '…' : 'Add'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
         </main>
       </div>
+
+      {/* ── Vehicle Modal ── */}
+      {vehicleModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}
+          onClick={e => { if (e.target === e.currentTarget) setVehicleModal(null); }}
+        >
+          <div className="bg-[#111] border border-gray-800 rounded-2xl w-full max-w-2xl"
+            style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.7)' }}>
+
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-800">
+              <div>
+                <h3 className="text-white font-bold text-lg">Vehicles</h3>
+                <p className="text-gray-500 text-xs mt-0.5">{vehicleModal.name}</p>
+              </div>
+              <button
+                onClick={() => setVehicleModal(null)}
+                className="text-xs bg-red-600/80 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg transition"
+              >Close</button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6">
+              {vehicleModalLoading ? (
+                <div className="flex items-center justify-center py-10">
+                  <div className="w-7 h-7 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : vehicleModalData.length === 0 ? (
+                <p className="text-gray-600 text-center py-8 text-sm">No vehicles registered yet.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[500px]">
+                    <thead>
+                      <tr>
+                        {['Year / Make & Model', 'License No.', 'VIN Number', 'Tire Size', 'Added'].map(h => (
+                          <th key={h} className={thCls}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {vehicleModalData.map(v => (
+                        <tr key={v._id} className="hover:bg-white/2">
+                          <td className={tdCls}><span className="font-medium text-white">{v.makeModel}</span></td>
+                          <td className={tdCls}>{v.licenseNo}</td>
+                          <td className={tdCls}>{v.vinNumber || '—'}</td>
+                          <td className={tdCls}>{v.tireSize  || '—'}</td>
+                          <td className={tdCls}>{new Date(v.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

@@ -8,7 +8,7 @@ const FleetSchema = new mongoose.Schema({
   companyEmail:   { type: String, required: true, unique: true, lowercase: true },
   phone:          { type: String, required: true },
   address:        { type: String, required: true },
-  vehicles:       { type: Number, required: true },
+  vehicles:       { type: Number, default: 0 },
   password:       { type: String, default: '' },
   status:         { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
 }, { timestamps: true });

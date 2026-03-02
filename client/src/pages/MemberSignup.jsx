@@ -11,7 +11,7 @@ const labelCls = 'block text-gray-400 text-xs font-medium mb-1.5 uppercase track
 
 const MemberSignup = () => {
   const [form, setForm] = useState({
-    name: '', email: '', phone: '', website: '', vehicle: '', tireSize: '', password: '', confirmPassword: '',
+    name: '', email: '', phone: '', website: '', password: '', confirmPassword: '',
   });
   const [show, setShow] = useState({ password: false, confirmPassword: false });
   const [status, setStatus] = useState({ loading: false, success: '', error: '' });
@@ -97,16 +97,6 @@ const MemberSignup = () => {
                   <input name="website" value={form.website} onChange={handle}
                     placeholder="https://yoursite.com" className={inputCls} />
                 </div>
-              </div>
-              <div>
-                <label className={labelCls}>Year, Make & Model of Vehicle *</label>
-                <input name="vehicle" value={form.vehicle} onChange={handle}
-                  placeholder="e.g. 2021 Toyota Camry" required className={inputCls} />
-              </div>
-              <div>
-                <label className={labelCls}>Tire Size <span className="text-gray-600 normal-case tracking-normal">(optional)</span></label>
-                <input name="tireSize" value={form.tireSize} onChange={handle}
-                  placeholder="eg. 235/65R16" className={inputCls} />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>

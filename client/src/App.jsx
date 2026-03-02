@@ -16,6 +16,7 @@ import MemberDashboard from './pages/MemberDashboard';
 import FleetSignup from './pages/FleetSignup';
 import MemberSignup from './pages/MemberSignup';
 import NotFound from './pages/NotFound';
+import StripePayment from './pages/StripePayment';
 
 /* Redirect logged-in users to their dashboard */
 const PublicRoute = ({ element }) => {
@@ -28,7 +29,7 @@ const PublicRoute = ({ element }) => {
 
 function Layout() {
   const { pathname } = useLocation();
-  const isAdmin = pathname === '/admin';
+  const isAdmin = pathname === '/admin' || pathname === '/stripe-payment' || pathname === '/fleet-dashboard' || pathname === '/member-dashboard';
 
   return (
     <div className="min-h-screen">
@@ -43,6 +44,7 @@ function Layout() {
         <Route path="/account" element={<PublicRoute element={<Account />} />} />
         <Route path="/account/fleet" element={<PublicRoute element={<FleetSignup />} />} />
         <Route path="/account/membership" element={<PublicRoute element={<MemberSignup />} />} />
+        <Route path="/stripe-payment" element={<StripePayment />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/fleet-dashboard" element={<FleetDashboard />} />
         <Route path="/member-dashboard" element={<MemberDashboard />} />

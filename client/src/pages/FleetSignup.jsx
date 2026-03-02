@@ -12,7 +12,7 @@ const labelCls = 'block text-gray-400 text-xs font-medium mb-1.5 uppercase track
 const FleetSignup = () => {
   const [form, setForm] = useState({
     companyName: '', companyWebsite: '', companyEmail: '',
-    phone: '', address: '', vehicles: '', password: '', confirmPassword: '',
+    phone: '', address: '', password: '', confirmPassword: '',
   });
   const [show, setShow] = useState({ password: false, confirmPassword: false });
   const [status, setStatus] = useState({ loading: false, success: '', error: '' });
@@ -103,11 +103,6 @@ const FleetSignup = () => {
                 <label className={labelCls}>Company Address *</label>
                 <input name="address" value={form.address} onChange={handle}
                   placeholder="123 Main St, City, Province/State" required className={inputCls} />
-              </div>
-              <div>
-                <label className={labelCls}>No. of Vehicles *</label>
-                <input name="vehicles" type="number" min="1" value={form.vehicles} onChange={handle}
-                  placeholder="e.g. 25" required className={inputCls} />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>

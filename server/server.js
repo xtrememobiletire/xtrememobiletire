@@ -1,7 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-require('dotenv').config();
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 
 const app = express();
 
@@ -16,6 +16,9 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/bookings', require('./routes/bookings'));
 app.use('/api/contact', require('./routes/contact'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/stripe', require('./routes/stripe'));
+app.use('/api/service-requests', require('./routes/serviceRequests'));
+app.use('/api/vehicles', require('./routes/vehicles'));
 
 // Health check
 app.get('/', (req, res) => res.json({ message: 'XMT Backend Running' }));
