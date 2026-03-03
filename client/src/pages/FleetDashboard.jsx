@@ -4,6 +4,7 @@ import {
   FaTruck, FaBuilding, FaPhone, FaEnvelope, FaMapMarkerAlt,
   FaSignOutAlt, FaCheckCircle, FaClock, FaTimesCircle,
   FaThLarge, FaCalendarPlus, FaListAlt, FaCar, FaPlus, FaTrash,
+  FaUserTie, FaEdit, FaTimes,
 } from 'react-icons/fa';
 import API from '../api';
 import logo from '../assets/xtrememobiletire.webp';
@@ -37,12 +38,17 @@ const FleetDashboard = () => {
   const [tab,     setTab]     = useState('dashboard');
 
   // Request form state
-  const [form,      setForm]      = useState({ appointmentDate: '', vehicle: '', service: '' });
+  const [form,      setForm]      = useState({ appointmentDate: '', vehicle: '', service: '', serviceType: '', address: '', phone: '', tireSize: '' });
+  const [customAddress,    setCustomAddress]    = useState('');
+  const [customPhone,      setCustomPhone]      = useState('');
+  const [useCustomAddress, setUseCustomAddress] = useState(false);
+  const [useCustomPhone,   setUseCustomPhone]   = useState(false);
   const [status,    setStatus]    = useState({ loading: false, success: '', error: '' });
 
   // My service requests
   const [myRequests,      setMyRequests]      = useState([]);
   const [requestsLoading, setRequestsLoading] = useState(false);
+  const [unreadCount,     setUnreadCount]     = useState(0);
 
   // Vehicles
   const [vehicles,        setVehicles]        = useState([]);
@@ -51,6 +57,14 @@ const FleetDashboard = () => {
   const [vehicleForm,     setVehicleForm]     = useState({ makeModel: '', licenseNo: '', vinNumber: '', tireSize: '' });
   const [vehicleStatus,   setVehicleStatus]   = useState({ loading: false, error: '' });
 
+  // Drivers
+  const [drivers,        setDrivers]        = useState([]);
+  const [driversLoading, setDriversLoading] = useState(false);
+  const [showDriverForm, setShowDriverForm] = useState(false);
+  const [driverForm,     setDriverForm]     = useState({ name: '', email: '', assignedVehicle: '' });
+  const [driverStatus,   setDriverStatus]   = useState({ loading: false, error: '' });
+  const [editingDriver,  setEditingDriver]  = useState(null); // driver object being edited
+
   useEffect(() => {
     const token = localStorage.getItem('xmt_token');
     const role  = localStorage.getItem('xmt_role');
@@ -58,8 +72,9 @@ const FleetDashboard = () => {
     API.get('/auth/me')
       .then(res => { setUser(res.data); setLoading(false); })
       .catch(()  => handleLogout());
-    // pre-load vehicles so count is available on dashboard
+    // pre-load vehicles & drivers so counts are available on dashboard
     API.get('/vehicles/mine').then(res => setVehicles(res.data)).catch(() => {});
+    API.get('/drivers/mine').then(res => setDrivers(res.data)).catch(() => {});
   }, []);
 
   const handleLogout = () => {
@@ -69,19 +84,35 @@ const FleetDashboard = () => {
     navigate('/');
   };
 
+  // Load unread count on mount
+  useEffect(() => {
+    API.get('/service-requests/mine')
+      .then(res => setUnreadCount(res.data.filter(r => !r.viewed).length))
+      .catch(() => {});
+  }, []);
+
   // Load my service requests when switching to services tab
   useEffect(() => {
     if (tab !== 'services') return;
     setRequestsLoading(true);
     API.get('/service-requests/mine')
-      .then(res => setMyRequests(res.data))
+      .then(res => {
+        setMyRequests(res.data);
+        setUnreadCount(res.data.filter(r => !r.viewed).length);
+        API.patch('/service-requests/mark-viewed').catch(() => {});
+        // Clear highlights after 2 seconds
+        setTimeout(() => {
+          setMyRequests(prev => prev.map(r => ({ ...r, viewed: true })));
+          setUnreadCount(0);
+        }, 2000);
+      })
       .catch(() => setMyRequests([]))
       .finally(() => setRequestsLoading(false));
   }, [tab]);
 
-  // Load vehicles when switching to vehicles tab or request tab
+  // Load vehicles when switching to vehicles, request, or drivers tab
   useEffect(() => {
-    if (tab !== 'vehicles' && tab !== 'request') return;
+    if (tab !== 'vehicles' && tab !== 'request' && tab !== 'drivers') return;
     setVehiclesLoading(true);
     API.get('/vehicles/mine')
       .then(res => setVehicles(res.data))
@@ -109,13 +140,73 @@ const FleetDashboard = () => {
     setVehicles(prev => prev.filter(v => v._id !== id));
   };
 
+  // ── Driver handlers ──
+  useEffect(() => {
+    if (tab !== 'drivers') return;
+    setDriversLoading(true);
+    API.get('/drivers/mine')
+      .then(res => setDrivers(res.data))
+      .catch(() => setDrivers([]))
+      .finally(() => setDriversLoading(false));
+  }, [tab]);
+
+  const handleAddDriver = async (e) => {
+    e.preventDefault();
+    setDriverStatus({ loading: true, error: '' });
+    try {
+      const res = await API.post('/drivers', driverForm);
+      setDrivers(prev => [...prev, res.data]);
+      setDriverForm({ name: '', email: '', assignedVehicle: '' });
+      setShowDriverForm(false);
+      setDriverStatus({ loading: false, error: '' });
+    } catch (err) {
+      setDriverStatus({ loading: false, error: err.response?.data?.message || 'Failed to add driver.' });
+    }
+  };
+
+  const handleUpdateDriver = async (e) => {
+    e.preventDefault();
+    setDriverStatus({ loading: true, error: '' });
+    try {
+      const res = await API.put(`/drivers/${editingDriver._id}`, driverForm);
+      setDrivers(prev => prev.map(d => d._id === res.data._id ? res.data : d));
+      setEditingDriver(null);
+      setDriverForm({ name: '', email: '', assignedVehicle: '' });
+      setDriverStatus({ loading: false, error: '' });
+    } catch (err) {
+      setDriverStatus({ loading: false, error: err.response?.data?.message || 'Failed to update driver.' });
+    }
+  };
+
+  const handleDeleteDriver = async (id) => {
+    if (!confirm('Delete this driver?')) return;
+    await API.delete(`/drivers/${id}`);
+    setDrivers(prev => prev.filter(d => d._id !== id));
+  };
+
+  const startEditDriver = (driver) => {
+    setEditingDriver(driver);
+    setDriverForm({ name: driver.name, email: driver.email, assignedVehicle: driver.assignedVehicle || '' });
+    setShowDriverForm(false);
+    setDriverStatus({ loading: false, error: '' });
+  };
+
+  const cancelDriverForm = () => {
+    setEditingDriver(null);
+    setShowDriverForm(false);
+    setDriverForm({ name: '', email: '', assignedVehicle: '' });
+    setDriverStatus({ loading: false, error: '' });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setStatus({ loading: true, success: '', error: '' });
     try {
       const res = await API.post('/service-requests', form);
       setStatus({ loading: false, success: res.data.message, error: '' });
-      setForm({ appointmentDate: '', vehicle: '', service: '' });
+      setForm({ appointmentDate: '', vehicle: '', service: '', serviceType: '', address: '', phone: '', tireSize: '' });
+      setCustomAddress(''); setCustomPhone('');
+      setUseCustomAddress(false); setUseCustomPhone(false);
     } catch (err) {
       setStatus({ loading: false, success: '', error: err.response?.data?.message || 'Something went wrong.' });
     }
@@ -139,6 +230,7 @@ const FleetDashboard = () => {
   const TABS = [
     { key: 'dashboard', label: 'Dashboard',           icon: <FaThLarge /> },
     { key: 'vehicles',  label: 'Vehicles',             icon: <FaCar /> },
+    { key: 'drivers',   label: 'My Drivers',           icon: <FaUserTie /> },
     { key: 'request',   label: 'Request New Service',  icon: <FaCalendarPlus /> },
     { key: 'services',  label: 'Service Status',       icon: <FaListAlt /> },
   ];
@@ -183,7 +275,12 @@ const FleetDashboard = () => {
                 }`}
               >
                 <span className="text-xs">{t.icon}</span>
-                {t.label}
+                <span className="flex-1">{t.label}</span>
+                {t.key === 'services' && unreadCount > 0 && (
+                  <span className="bg-red-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0">
+                    {unreadCount}
+                  </span>
+                )}
               </button>
             ))}
           </nav>
@@ -198,11 +295,16 @@ const FleetDashboard = () => {
               <h2 className="text-2xl font-bold">Dashboard</h2>
 
               {/* Stats */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-[#111] border border-gray-800 rounded-xl p-5 text-center">
+              <div className="grid grid-cols-3 gap-4">
+                <div className="bg-[#111] border border-gray-800 rounded-xl p-5 text-center cursor-pointer hover:border-red-600/40 transition" onClick={() => setTab('vehicles')}>
                   <FaTruck className="text-red-500 text-2xl mx-auto mb-2" />
                   <p className="text-white text-3xl font-bold">{vehicles.length}</p>
                   <p className="text-gray-500 text-xs uppercase tracking-wide mt-1">Vehicles</p>
+                </div>
+                <div className="bg-[#111] border border-gray-800 rounded-xl p-5 text-center cursor-pointer hover:border-red-600/40 transition" onClick={() => setTab('drivers')}>
+                  <FaUserTie className="text-red-500 text-2xl mx-auto mb-2" />
+                  <p className="text-white text-3xl font-bold">{drivers.length}</p>
+                  <p className="text-gray-500 text-xs uppercase tracking-wide mt-1">Drivers</p>
                 </div>
                 <div className="bg-[#111] border border-gray-800 rounded-xl p-5 text-center">
                   <FaBuilding className="text-red-500 text-2xl mx-auto mb-2" />
@@ -353,6 +455,178 @@ const FleetDashboard = () => {
             </div>
           )}
 
+          {/* ── My Drivers Tab ── */}
+          {tab === 'drivers' && (
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold">My Drivers</h2>
+                  <p className="text-gray-400 text-sm mt-1">Manage drivers assigned to your fleet.</p>
+                </div>
+                {!editingDriver && (
+                  <button
+                    onClick={() => { setShowDriverForm(v => !v); setDriverStatus({ loading: false, error: '' }); }}
+                    className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white text-sm font-bold px-4 py-2.5 rounded-lg transition"
+                  >
+                    <FaPlus className="text-xs" /> Add New Driver
+                  </button>
+                )}
+              </div>
+
+              {/* Add Driver Form */}
+              {showDriverForm && !editingDriver && (
+                <div className="bg-[#111] border border-gray-800 rounded-2xl p-6 mb-6">
+                  <h3 className="text-white font-bold mb-5">New Driver Details</h3>
+                  <form onSubmit={handleAddDriver} className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className={labelCls}>Driver Name *</label>
+                        <input value={driverForm.name} onChange={e => setDriverForm({ ...driverForm, name: e.target.value })}
+                          placeholder="e.g. John Smith" required className={inputCls} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>Driver Email *</label>
+                        <input type="email" value={driverForm.email} onChange={e => setDriverForm({ ...driverForm, email: e.target.value })}
+                          placeholder="e.g. john@example.com" required className={inputCls} />
+                      </div>
+                    </div>
+                    <div>
+                      <label className={labelCls}>Assigned Vehicle</label>
+                      {vehicles.length > 0 ? (
+                        <select value={driverForm.assignedVehicle} onChange={e => setDriverForm({ ...driverForm, assignedVehicle: e.target.value })}
+                          className={`${inputCls} cursor-pointer`}>
+                          <option value="">— Unassigned —</option>
+                          {vehicles.map(v => (
+                            <option key={v._id} value={`${v.makeModel} (${v.licenseNo})`}>
+                              {v.makeModel} — {v.licenseNo}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input value={driverForm.assignedVehicle} onChange={e => setDriverForm({ ...driverForm, assignedVehicle: e.target.value })}
+                          placeholder="e.g. 2022 Ford F-150 (ABC-1234)" className={inputCls} />
+                      )}
+                    </div>
+                    {driverStatus.error && (
+                      <p className="text-red-400 text-sm bg-red-400/10 border border-red-400/20 rounded-lg p-3">{driverStatus.error}</p>
+                    )}
+                    <div className="flex gap-3 pt-1">
+                      <button type="submit" disabled={driverStatus.loading}
+                        className="bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white font-bold px-6 py-2.5 rounded-lg text-sm transition">
+                        {driverStatus.loading ? 'Saving…' : 'Save Driver'}
+                      </button>
+                      <button type="button" onClick={cancelDriverForm}
+                        className="text-gray-400 hover:text-white border border-gray-700 px-6 py-2.5 rounded-lg text-sm transition">
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {/* Edit Driver Form */}
+              {editingDriver && (
+                <div className="bg-[#111] border border-red-600/30 rounded-2xl p-6 mb-6">
+                  <h3 className="text-white font-bold mb-5">Edit Driver — <span className="text-red-400">DRVR-{editingDriver.driverNo}</span></h3>
+                  <form onSubmit={handleUpdateDriver} className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className={labelCls}>Driver Name *</label>
+                        <input value={driverForm.name} onChange={e => setDriverForm({ ...driverForm, name: e.target.value })}
+                          placeholder="e.g. John Smith" required className={inputCls} />
+                      </div>
+                      <div>
+                        <label className={labelCls}>Driver Email *</label>
+                        <input type="email" value={driverForm.email} onChange={e => setDriverForm({ ...driverForm, email: e.target.value })}
+                          placeholder="e.g. john@example.com" required className={inputCls} />
+                      </div>
+                    </div>
+                    <div>
+                      <label className={labelCls}>Assigned Vehicle</label>
+                      {vehicles.length > 0 ? (
+                        <select value={driverForm.assignedVehicle} onChange={e => setDriverForm({ ...driverForm, assignedVehicle: e.target.value })}
+                          className={`${inputCls} cursor-pointer`}>
+                          <option value="">— Unassigned —</option>
+                          {vehicles.map(v => (
+                            <option key={v._id} value={`${v.makeModel} (${v.licenseNo})`}>
+                              {v.makeModel} — {v.licenseNo}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input value={driverForm.assignedVehicle} onChange={e => setDriverForm({ ...driverForm, assignedVehicle: e.target.value })}
+                          placeholder="e.g. 2022 Ford F-150 (ABC-1234)" className={inputCls} />
+                      )}
+                    </div>
+                    {driverStatus.error && (
+                      <p className="text-red-400 text-sm bg-red-400/10 border border-red-400/20 rounded-lg p-3">{driverStatus.error}</p>
+                    )}
+                    <div className="flex gap-3 pt-1">
+                      <button type="submit" disabled={driverStatus.loading}
+                        className="bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white font-bold px-6 py-2.5 rounded-lg text-sm transition">
+                        {driverStatus.loading ? 'Updating…' : 'Update Driver'}
+                      </button>
+                      <button type="button" onClick={cancelDriverForm}
+                        className="text-gray-400 hover:text-white border border-gray-700 px-6 py-2.5 rounded-lg text-sm transition">
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {/* Drivers List */}
+              {driversLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <div className="w-7 h-7 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : drivers.length === 0 ? (
+                <div className="bg-[#111] border border-gray-800 rounded-xl px-6 py-12 text-center">
+                  <FaUserTie className="text-gray-700 text-4xl mx-auto mb-3" />
+                  <p className="text-gray-500 text-sm">No drivers added yet.</p>
+                </div>
+              ) : (
+                <div className="bg-[#111] border border-gray-800 rounded-xl overflow-hidden">
+                  <table className="w-full">
+                    <thead>
+                      <tr>
+                        {['Driver No.', 'Name', 'Email', 'Assigned Vehicle', 'Actions'].map(h => (
+                          <th key={h} className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 py-3 border-b border-gray-800">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {drivers.map(d => (
+                        <tr key={d._id} className={`hover:bg-white/[0.02] ${editingDriver?._id === d._id ? 'bg-red-600/5' : ''}`}>
+                          <td className="px-4 py-3 border-b border-gray-800/60">
+                            <span className="font-mono font-bold text-red-400 text-sm">DRVR-{d.driverNo}</span>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-white font-medium border-b border-gray-800/60">{d.name}</td>
+                          <td className="px-4 py-3 text-sm text-gray-400 border-b border-gray-800/60">{d.email}</td>
+                          <td className="px-4 py-3 text-sm text-gray-400 border-b border-gray-800/60">
+                            {d.assignedVehicle || <span className="text-gray-600 italic">Unassigned</span>}
+                          </td>
+                          <td className="px-4 py-3 border-b border-gray-800/60">
+                            <div className="flex items-center gap-2">
+                              <button onClick={() => startEditDriver(d)}
+                                className="text-xs bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-600/30 px-2.5 py-1 rounded-lg transition flex items-center gap-1">
+                                <FaEdit className="text-xs" /> Edit
+                              </button>
+                              <button onClick={() => handleDeleteDriver(d._id)}
+                                className="text-xs bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-600/30 px-2.5 py-1 rounded-lg transition flex items-center gap-1">
+                                <FaTrash className="text-xs" /> Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* ── Service Status Tab ── */}
           {tab === 'services' && (
             <div>
@@ -373,28 +647,41 @@ const FleetDashboard = () => {
                 </div>
               ) : (
                 <div className="bg-[#111] border border-gray-800 rounded-xl overflow-x-auto">
-                  <table className="w-full min-w-[600px]">
+                  <table className="w-full min-w-[680px]">
                     <thead>
                       <tr>
-                        {['Service', 'Vehicle', 'Appointment Date', 'Submitted', 'Status'].map(h => (
+                        {['Appt #', 'Service', 'Type', 'Vehicle', 'Tire Size', 'Address', 'Phone', 'Appointment Date', 'Status'].map(h => (
                           <th key={h} className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 py-3 border-b border-gray-800">{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {myRequests.map(req => (
-                        <tr key={req._id} className="hover:bg-white/2">
+                        <tr key={req._id} className={`hover:bg-white/2 ${!req.viewed ? 'bg-red-600/5' : ''}`}>
+                          <td className="px-4 py-3 border-b border-gray-800/60">
+                            <span className="font-mono font-bold text-red-400 text-sm">
+                              #{req.apptNumber ?? '—'}
+                            </span>
+                            {!req.viewed && (
+                              <span className="ml-2 inline-block w-2 h-2 bg-red-500 rounded-full align-middle" title="Status updated" />
+                            )}
+                          </td>
                           <td className="px-4 py-3 text-sm text-gray-200 border-b border-gray-800/60 font-medium">{req.service}</td>
+                          <td className="px-4 py-3 border-b border-gray-800/60">
+                            {req.serviceType ? (
+                              <span className={`text-xs px-2 py-0.5 rounded border ${req.serviceType === 'Urgent Service' ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-green-500/20 text-green-400 border-green-500/30'}`}>
+                                {req.serviceType}
+                              </span>
+                            ) : '—'}
+                          </td>
                           <td className="px-4 py-3 text-sm text-gray-400 border-b border-gray-800/60">{req.vehicle || '—'}</td>
+                          <td className="px-4 py-3 text-sm text-gray-400 border-b border-gray-800/60">{req.tireSize || '—'}</td>
+                          <td className="px-4 py-3 text-sm text-gray-400 border-b border-gray-800/60 max-w-[160px] truncate">{req.address || '—'}</td>
+                          <td className="px-4 py-3 text-sm text-gray-400 border-b border-gray-800/60">{req.phone || '—'}</td>
                           <td className="px-4 py-3 text-sm text-gray-400 border-b border-gray-800/60">
                             {new Date(req.appointmentDate).toLocaleString('en-US', {
                               month: 'short', day: 'numeric', year: 'numeric',
                               hour: '2-digit', minute: '2-digit',
-                            })}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-400 border-b border-gray-800/60">
-                            {new Date(req.createdAt).toLocaleDateString('en-US', {
-                              month: 'short', day: 'numeric', year: 'numeric',
                             })}
                           </td>
                           <td className="px-4 py-3 border-b border-gray-800/60">
@@ -411,86 +698,138 @@ const FleetDashboard = () => {
 
           {/* ── Request New Service Tab ── */}
           {tab === 'request' && (
-            <div className="max-w-xl">
+            <div>
               <h2 className="text-2xl font-bold mb-1">Book an Appointment</h2>
-              <p className="text-gray-400 text-sm mb-8">Fill in the details below to request a new service.</p>
+              <p className="text-gray-400 text-sm mb-6">Fill in the details below to request a new service.</p>
 
               <div className="bg-[#111] border border-gray-800 rounded-2xl p-8">
-                <form onSubmit={handleSubmit} className="space-y-5">
+                <form onSubmit={handleSubmit} className="space-y-6">
 
-                  {/* Appointment Date & Time */}
-                  <div>
-                    <label className={labelCls}>Appointment Date & Time *</label>
-                    <input
-                      type="datetime-local"
-                      value={form.appointmentDate}
-                      onChange={e => setForm({ ...form, appointmentDate: e.target.value })}
-                      required
-                      className={`${inputCls} [color-scheme:dark]`}
-                    />
-                    <p className="text-gray-600 text-xs mt-1">Available hours: 9:00 AM – 5:00 PM</p>
+                  {/* Row 1: Date + Vehicle */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div>
+                      <label className={labelCls}>Appointment Date & Time *</label>
+                      <input type="datetime-local" value={form.appointmentDate}
+                        onChange={e => setForm({ ...form, appointmentDate: e.target.value })}
+                        required className={`${inputCls} [color-scheme:dark]`} />
+                      <p className="text-gray-600 text-xs mt-1">24/7 Hours</p>
+                    </div>
+                    <div>
+                      <label className={labelCls}>Vehicle</label>
+                      {vehiclesLoading ? (
+                        <p className="text-gray-600 text-xs py-2">Loading vehicles…</p>
+                      ) : vehicles.length > 0 ? (
+                        <select value={form.vehicle} onChange={e => setForm({ ...form, vehicle: e.target.value })}
+                          className={`${inputCls} cursor-pointer`}>
+                          <option value="">Select a vehicle…</option>
+                          {vehicles.map(v => (
+                            <option key={v._id} value={`${v.makeModel} (${v.licenseNo})`}>
+                              {v.makeModel} — {v.licenseNo}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <div className="bg-[#0d0d0d] border border-gray-700 rounded-lg px-4 py-3 text-xs text-gray-500">
+                          No vehicles added yet.{' '}
+                          <button type="button" onClick={() => setTab('vehicles')} className="text-red-500 hover:underline">Add a vehicle →</button>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Vehicle */}
-                  <div>
-                    <label className={labelCls}>Vehicle</label>
-                    {vehiclesLoading ? (
-                      <p className="text-gray-600 text-xs py-2">Loading vehicles…</p>
-                    ) : vehicles.length > 0 ? (
-                      <select
-                        value={form.vehicle}
-                        onChange={e => setForm({ ...form, vehicle: e.target.value })}
-                        className={`${inputCls} cursor-pointer`}
-                      >
-                        <option value="">Select a vehicle…</option>
-                        {vehicles.map(v => (
-                          <option key={v._id} value={`${v.makeModel} (${v.licenseNo})`}>
-                            {v.makeModel} — {v.licenseNo}
-                          </option>
-                        ))}
+                  {/* Row 2: Service + Service Type */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div>
+                      <label className={labelCls}>Select Service *</label>
+                      <select value={form.service} onChange={e => setForm({ ...form, service: e.target.value })}
+                        required className={`${inputCls} cursor-pointer`}>
+                        <option value="" disabled>Select a service...</option>
+                        {SERVICES.map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
-                    ) : (
-                      <div className="bg-[#0d0d0d] border border-gray-700 rounded-lg px-4 py-3 text-xs text-gray-500">
-                        No vehicles added yet.{' '}
-                        <button type="button" onClick={() => setTab('vehicles')} className="text-red-500 hover:underline">
-                          Add a vehicle →
-                        </button>
-                      </div>
+                    </div>
+                    <div>
+                      <label className={labelCls}>Service Type</label>
+                      <select value={form.serviceType} onChange={e => setForm({ ...form, serviceType: e.target.value })}
+                        className={`${inputCls} cursor-pointer`}>
+                        <option value="">Select service type…</option>
+                        <option value="Standard Service">Standard Service</option>
+                        <option value="Urgent Service">Urgent Service</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Row 3: Phone + Tire Size */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div>
+                      <label className={labelCls}>Phone Number</label>
+                      <select
+                        value={useCustomPhone ? '__custom__' : form.phone}
+                        onChange={e => {
+                          if (e.target.value === '__custom__') {
+                            setUseCustomPhone(true);
+                            setCustomPhone('');
+                            setForm({ ...form, phone: '' });
+                          } else {
+                            setUseCustomPhone(false);
+                            setCustomPhone('');
+                            setForm({ ...form, phone: e.target.value });
+                          }
+                        }}
+                        className={`${inputCls} cursor-pointer`}>
+                        <option value="">Select phone number…</option>
+                        {user.phone && <option value={user.phone}>{user.phone}</option>}
+                        <option value="__custom__">Enter custom number…</option>
+                      </select>
+                      {useCustomPhone && (
+                        <input value={customPhone}
+                          onChange={e => { setCustomPhone(e.target.value); setForm({ ...form, phone: e.target.value }); }}
+                          placeholder="Enter phone number…" className={`${inputCls} mt-2`} autoFocus />
+                      )}
+                    </div>
+                    <div>
+                      <label className={labelCls}>Tire Size</label>
+                      <input value={form.tireSize || ''} onChange={e => setForm({ ...form, tireSize: e.target.value })}
+                        placeholder="e.g. 235/65R17" className={inputCls} />
+                    </div>
+                  </div>
+
+                  {/* Row 4: Address (full width) */}
+                  <div>
+                    <label className={labelCls}>Address</label>
+                    <select
+                      value={useCustomAddress ? '__custom__' : form.address}
+                      onChange={e => {
+                        if (e.target.value === '__custom__') {
+                          setUseCustomAddress(true);
+                          setCustomAddress('');
+                          setForm({ ...form, address: '' });
+                        } else {
+                          setUseCustomAddress(false);
+                          setCustomAddress('');
+                          setForm({ ...form, address: e.target.value });
+                        }
+                      }}
+                      className={`${inputCls} cursor-pointer`}>
+                      <option value="">Select address…</option>
+                      {user.address && <option value={user.address}>{user.address}</option>}
+                      <option value="__custom__">Enter custom address…</option>
+                    </select>
+                    {useCustomAddress && (
+                      <input value={customAddress}
+                        onChange={e => { setCustomAddress(e.target.value); setForm({ ...form, address: e.target.value }); }}
+                        placeholder="Enter full address…" className={`${inputCls} mt-2`} autoFocus />
                     )}
                   </div>
 
-                  {/* Select Service */}
-                  <div>
-                    <label className={labelCls}>Select Service *</label>
-                    <select
-                      value={form.service}
-                      onChange={e => setForm({ ...form, service: e.target.value })}
-                      required
-                      className={`${inputCls} cursor-pointer`}
-                    >
-                      <option value="" disabled>Select a service...</option>
-                      {SERVICES.map(s => (
-                        <option key={s} value={s}>{s}</option>
-                      ))}
-                    </select>
-                  </div>
-
                   {status.success && (
-                    <p className="text-green-400 text-sm text-center bg-green-400/10 border border-green-400/20 rounded-lg p-3">
-                      {status.success}
-                    </p>
+                    <p className="text-green-400 text-sm text-center bg-green-400/10 border border-green-400/20 rounded-lg p-3">{status.success}</p>
                   )}
                   {status.error && (
-                    <p className="text-red-400 text-sm text-center bg-red-400/10 border border-red-400/20 rounded-lg p-3">
-                      {status.error}
-                    </p>
+                    <p className="text-red-400 text-sm text-center bg-red-400/10 border border-red-400/20 rounded-lg p-3">{status.error}</p>
                   )}
 
-                  <button
-                    type="submit"
-                    disabled={status.loading}
-                    className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white font-bold py-3.5 rounded-lg transition tracking-wide uppercase text-sm"
-                  >
+                  <button type="submit" disabled={status.loading}
+                    className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white font-bold py-3.5 rounded-lg transition tracking-wide uppercase text-sm">
                     {status.loading ? 'Submitting...' : 'Submit Request'}
                   </button>
                 </form>

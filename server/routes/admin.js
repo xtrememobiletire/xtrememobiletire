@@ -7,20 +7,26 @@ const Contact = require('../models/Contact');
 const ServiceRequest = require('../models/ServiceRequest');
 const CustomStatus = require('../models/CustomStatus');
 const Vehicle = require('../models/Vehicle');
+const Driver  = require('../models/Driver');
 
 // All routes below require admin token
 
 // ── Fleets ──
 router.get('/fleets', adminAuth, async (req, res) => {
   const fleets = await Fleet.find().select('-password').sort({ createdAt: -1 });
-  const counts = await Vehicle.aggregate([
+  const vCounts = await Vehicle.aggregate([
     { $group: { _id: '$userId', count: { $sum: 1 } } }
   ]);
-  const countMap = {};
-  counts.forEach(c => { countMap[c._id.toString()] = c.count; });
+  const dCounts = await Driver.aggregate([
+    { $group: { _id: '$fleetUserId', count: { $sum: 1 } } }
+  ]);
+  const vMap = {}, dMap = {};
+  vCounts.forEach(c => { vMap[c._id.toString()] = c.count; });
+  dCounts.forEach(c => { dMap[c._id.toString()] = c.count; });
   const result = fleets.map(f => ({
     ...f.toObject(),
-    vehicleCount: countMap[f._id.toString()] || 0,
+    vehicleCount: vMap[f._id.toString()] || 0,
+    driverCount:  dMap[f._id.toString()] || 0,
   }));
   res.json(result);
 });
@@ -99,6 +105,12 @@ router.get('/vehicles/:userId', adminAuth, async (req, res) => {
   res.json(vehicles);
 });
 
+// ── Drivers by fleet user (admin view) ──
+router.get('/drivers/:userId', adminAuth, async (req, res) => {
+  const drivers = await Driver.find({ fleetUserId: req.params.userId }).sort({ driverNo: 1 });
+  res.json(drivers);
+});
+
 // ── Service Requests ──
 router.get('/service-requests', adminAuth, async (req, res) => {
   const requests = await ServiceRequest.find().sort({ createdAt: -1 });
@@ -107,7 +119,7 @@ router.get('/service-requests', adminAuth, async (req, res) => {
 
 router.patch('/service-requests/:id', adminAuth, async (req, res) => {
   const request = await ServiceRequest.findByIdAndUpdate(
-    req.params.id, { status: req.body.status }, { new: true }
+    req.params.id, { status: req.body.status, viewed: false }, { new: true }
   );
   res.json(request);
 });

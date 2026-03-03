@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FaEnvelope, FaLock, FaArrowRight, FaEye, FaEyeSlash, FaCheck, FaTimes, FaCar, FaTrash } from 'react-icons/fa';
+import { FaEnvelope, FaLock, FaArrowRight, FaEye, FaEyeSlash, FaCheck, FaTimes, FaCar, FaTrash, FaUserTie } from 'react-icons/fa';
 import API from '../api';
 import logo from '../assets/xtrememobiletire.webp';
 
@@ -98,8 +98,8 @@ export default function Admin() {
   const [loading, setLoading] = useState(false);
 
   // Vehicle modal
-  const [vehicleModal,      setVehicleModal]      = useState(null); // { name, userId }
-  const [vehicleModalData,  setVehicleModalData]  = useState([]);
+  const [vehicleModal,        setVehicleModal]        = useState(null);
+  const [vehicleModalData,    setVehicleModalData]    = useState([]);
   const [vehicleModalLoading, setVehicleModalLoading] = useState(false);
 
   const openVehicleModal = async (name, userId) => {
@@ -112,6 +112,25 @@ export default function Admin() {
     } catch { setVehicleModalData([]); }
     finally { setVehicleModalLoading(false); }
   };
+
+  // Driver modal
+  const [driverModal,        setDriverModal]        = useState(null);
+  const [driverModalData,    setDriverModalData]    = useState([]);
+  const [driverModalLoading, setDriverModalLoading] = useState(false);
+
+  const openDriverModal = async (name, userId) => {
+    setDriverModal({ name, userId });
+    setDriverModalData([]);
+    setDriverModalLoading(true);
+    try {
+      const res = await API.get(`/admin/drivers/${userId}`);
+      setDriverModalData(res.data);
+    } catch { setDriverModalData([]); }
+    finally { setDriverModalLoading(false); }
+  };
+
+  // Service request detail modal
+  const [reqDetail, setReqDetail] = useState(null);
 
   // Status management
   const [allStatuses,    setAllStatuses]    = useState([]);
@@ -361,7 +380,7 @@ export default function Admin() {
                   <table className="w-full min-w-[800px]">
                     <thead>
                       <tr>
-                        {['Fleet ID','Company','Email','Phone','Address','No. of Vehicles','Status','Actions'].map(h => (
+                        {['Fleet ID','Company','Email','Phone','Address','Vehicles','Drivers','Status','Actions'].map(h => (
                           <th key={h} className={thCls}>{h}</th>
                         ))}
                       </tr>
@@ -380,6 +399,15 @@ export default function Admin() {
                           <td className={tdCls}>{f.phone}</td>
                           <td className={tdCls}>{f.address}</td>
                           <td className={tdCls}>{f.vehicleCount ?? 0}</td>
+                          <td className={tdCls}>
+                            <button
+                              onClick={() => openDriverModal(f.companyName, f._id)}
+                              className="font-bold text-white hover:text-red-400 transition underline-offset-2 hover:underline"
+                              title="View Drivers"
+                            >
+                              {f.driverCount ?? 0}
+                            </button>
+                          </td>
                           <td className={tdCls}><Badge s={f.status} /></td>
                           <td className={tdCls}>
                             <div className="flex gap-1.5 items-center">
@@ -399,6 +427,10 @@ export default function Admin() {
                                 className="w-7 h-7 flex items-center justify-center bg-blue-600/80 hover:bg-blue-700 rounded transition">
                                 <FaCar className="text-white text-xs" />
                               </button>
+                              <button onClick={() => openDriverModal(f.companyName, f._id)} title="View Drivers"
+                                className="w-7 h-7 flex items-center justify-center bg-purple-600/80 hover:bg-purple-700 rounded transition">
+                                <FaUserTie className="text-white text-xs" />
+                              </button>
                               <button onClick={() => deleteItem(f._id)} title="Delete"
                                 className="w-7 h-7 flex items-center justify-center bg-red-600/80 hover:bg-red-700 rounded transition">
                                 <FaTrash className="text-white text-xs" />
@@ -407,7 +439,7 @@ export default function Admin() {
                           </td>
                         </tr>
                       ))}
-                      {!data.length && <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-600">No fleet signups yet.</td></tr>}
+                      {!data.length && <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-600">No fleet signups yet.</td></tr>}
                     </tbody>
                   </table>
                 </div>
@@ -494,14 +526,14 @@ export default function Admin() {
                   <table className="w-full min-w-[800px]">
                     <thead>
                       <tr>
-                        {['Name', 'Type', 'Email', 'Vehicle', 'Service', 'Date & Time', 'Status', 'Actions'].map(h => (
+                        {['Name', 'Type', 'Email', 'Vehicle', 'Service', 'Svc Type', 'Tire Size', 'Address', 'Phone', 'Date & Time', 'Status', 'Actions'].map(h => (
                           <th key={h} className={thCls}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {data.map(req => (
-                        <tr key={req._id} className="hover:bg-white/2">
+                        <tr key={req._id} className="hover:bg-white/5 cursor-pointer" onClick={() => setReqDetail(req)}>
                           <td className={tdCls}>{req.userName}</td>
                           <td className={tdCls}>
                             <span className={`text-xs px-2 py-0.5 rounded border capitalize ${
@@ -514,6 +546,16 @@ export default function Admin() {
                           <td className={tdCls}>{req.vehicle || '—'}</td>
                           <td className={tdCls}>{req.service}</td>
                           <td className={tdCls}>
+                            {req.serviceType ? (
+                              <span className={`text-xs px-2 py-0.5 rounded border ${req.serviceType === 'Urgent Service' ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-green-500/20 text-green-400 border-green-500/30'}`}>
+                                {req.serviceType}
+                              </span>
+                            ) : '—'}
+                          </td>
+                          <td className={tdCls}>{req.tireSize || '—'}</td>
+                          <td className={tdCls}>{req.address || '—'}</td>
+                          <td className={tdCls}>{req.phone || '—'}</td>
+                          <td className={tdCls}>
                             {req.appointmentDate
                               ? new Date(req.appointmentDate).toLocaleString('en-US', {
                                   month: 'short', day: 'numeric', year: 'numeric',
@@ -521,7 +563,7 @@ export default function Admin() {
                                 })
                               : '—'}
                           </td>
-                          <td className={tdCls}>
+                          <td className={tdCls} onClick={e => e.stopPropagation()}>
                             <select
                               value={req.status}
                               onChange={e => updateStatus(req._id, e.target.value)}
@@ -532,7 +574,7 @@ export default function Admin() {
                               ))}
                             </select>
                           </td>
-                          <td className={tdCls}>
+                          <td className={tdCls} onClick={e => e.stopPropagation()}>
                             <button
                               onClick={() => deleteItem(req._id)}
                               className="text-xs bg-red-600/80 hover:bg-red-700 px-2 py-1 rounded"
@@ -541,7 +583,7 @@ export default function Admin() {
                         </tr>
                       ))}
                       {!data.length && (
-                        <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-600">No service requests yet.</td></tr>
+                        <tr><td colSpan={12} className="px-4 py-8 text-center text-gray-600">No service requests yet.</td></tr>
                       )}
                     </tbody>
                   </table>
@@ -612,6 +654,203 @@ export default function Admin() {
 
         </main>
       </div>
+
+      {/* ── Service Request Detail Modal ── */}
+      {reqDetail && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.80)' }}
+          onClick={e => { if (e.target === e.currentTarget) setReqDetail(null); }}
+        >
+          <div className="bg-[#111] border border-gray-800 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+            style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.7)' }}>
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-800">
+              <div>
+                <p className="text-gray-500 text-xs uppercase tracking-widest mb-0.5">Service Request</p>
+                <h3 className="text-white font-bold text-lg">
+                  Appt #{reqDetail.apptNumber ?? '—'} — {reqDetail.userName}
+                </h3>
+              </div>
+              <button onClick={() => setReqDetail(null)}
+                className="text-gray-500 hover:text-red-400 transition text-2xl leading-none">×</button>
+            </div>
+
+            {/* Body */}
+            <div className="px-6 py-6 space-y-6">
+
+              {/* User Info */}
+              <div>
+                <p className="text-gray-500 text-xs uppercase tracking-widest mb-3">User Info</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-[#0a0a0a] border border-gray-800 rounded-xl px-4 py-3">
+                    <p className="text-gray-500 text-xs mb-1">Name</p>
+                    <p className="text-white text-sm font-medium">{reqDetail.userName}</p>
+                  </div>
+                  <div className="bg-[#0a0a0a] border border-gray-800 rounded-xl px-4 py-3">
+                    <p className="text-gray-500 text-xs mb-1">Type</p>
+                    <span className={`text-xs px-2 py-0.5 rounded border capitalize ${
+                      reqDetail.userType === 'fleet'
+                        ? 'bg-orange-500/20 text-orange-400 border-orange-500/30'
+                        : 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+                    }`}>{reqDetail.userType}</span>
+                  </div>
+                  <div className="bg-[#0a0a0a] border border-gray-800 rounded-xl px-4 py-3">
+                    <p className="text-gray-500 text-xs mb-1">Email</p>
+                    <p className="text-white text-sm">{reqDetail.userEmail}</p>
+                  </div>
+                  <div className="bg-[#0a0a0a] border border-gray-800 rounded-xl px-4 py-3">
+                    <p className="text-gray-500 text-xs mb-1">Phone</p>
+                    <p className="text-white text-sm">{reqDetail.phone || '—'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Service Info */}
+              <div>
+                <p className="text-gray-500 text-xs uppercase tracking-widest mb-3">Service Info</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-[#0a0a0a] border border-gray-800 rounded-xl px-4 py-3">
+                    <p className="text-gray-500 text-xs mb-1">Service</p>
+                    <p className="text-white text-sm font-medium">{reqDetail.service}</p>
+                  </div>
+                  <div className="bg-[#0a0a0a] border border-gray-800 rounded-xl px-4 py-3">
+                    <p className="text-gray-500 text-xs mb-1">Service Type</p>
+                    {reqDetail.serviceType ? (
+                      <span className={`text-xs px-2 py-0.5 rounded border ${reqDetail.serviceType === 'Urgent Service' ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-green-500/20 text-green-400 border-green-500/30'}`}>
+                        {reqDetail.serviceType}
+                      </span>
+                    ) : <p className="text-gray-500 text-sm">—</p>}
+                  </div>
+                  <div className="bg-[#0a0a0a] border border-gray-800 rounded-xl px-4 py-3">
+                    <p className="text-gray-500 text-xs mb-1">Vehicle</p>
+                    <p className="text-white text-sm">{reqDetail.vehicle || '—'}</p>
+                  </div>
+                  <div className="bg-[#0a0a0a] border border-gray-800 rounded-xl px-4 py-3">
+                    <p className="text-gray-500 text-xs mb-1">Tire Size</p>
+                    <p className="text-white text-sm">{reqDetail.tireSize || '—'}</p>
+                  </div>
+                  <div className="bg-[#0a0a0a] border border-gray-800 rounded-xl px-4 py-3 col-span-2">
+                    <p className="text-gray-500 text-xs mb-1">Address</p>
+                    <p className="text-white text-sm">{reqDetail.address || '—'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Appointment Info */}
+              <div>
+                <p className="text-gray-500 text-xs uppercase tracking-widest mb-3">Appointment</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-[#0a0a0a] border border-gray-800 rounded-xl px-4 py-3">
+                    <p className="text-gray-500 text-xs mb-1">Date & Time</p>
+                    <p className="text-white text-sm">
+                      {reqDetail.appointmentDate
+                        ? new Date(reqDetail.appointmentDate).toLocaleString('en-US', {
+                            month: 'short', day: 'numeric', year: 'numeric',
+                            hour: '2-digit', minute: '2-digit',
+                          })
+                        : '—'}
+                    </p>
+                  </div>
+                  <div className="bg-[#0a0a0a] border border-gray-800 rounded-xl px-4 py-3">
+                    <p className="text-gray-500 text-xs mb-1">Submitted</p>
+                    <p className="text-white text-sm">
+                      {new Date(reqDetail.createdAt).toLocaleDateString('en-US', {
+                        month: 'short', day: 'numeric', year: 'numeric',
+                      })}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Status */}
+              <div>
+                <p className="text-gray-500 text-xs uppercase tracking-widest mb-3">Status</p>
+                <div className="flex items-center gap-3">
+                  <select
+                    value={reqDetail.status}
+                    onChange={e => {
+                      updateStatus(reqDetail._id, e.target.value);
+                      setReqDetail({ ...reqDetail, status: e.target.value });
+                    }}
+                    className="bg-[#0a0a0a] border border-gray-700 text-gray-300 text-sm rounded-lg px-3 py-2.5 outline-none focus:border-red-600 transition cursor-pointer"
+                  >
+                    {allStatuses.map(s => (
+                      <option key={s._id} value={s.label}>{s.label}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => { deleteItem(reqDetail._id); setReqDetail(null); }}
+                    className="text-xs bg-red-600/80 hover:bg-red-700 text-white px-4 py-2.5 rounded-lg transition"
+                  >Delete Request</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Driver Modal ── */}
+      {driverModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}
+          onClick={e => { if (e.target === e.currentTarget) setDriverModal(null); }}
+        >
+          <div className="bg-[#111] border border-gray-800 rounded-2xl w-full max-w-2xl"
+            style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.7)' }}>
+
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-800">
+              <div>
+                <h3 className="text-white font-bold text-lg flex items-center gap-2">
+                  <FaUserTie className="text-red-500" /> Drivers
+                </h3>
+                <p className="text-gray-500 text-xs mt-0.5">{driverModal.name}</p>
+              </div>
+              <button
+                onClick={() => setDriverModal(null)}
+                className="text-xs bg-red-600/80 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg transition"
+              >Close</button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6">
+              {driverModalLoading ? (
+                <div className="flex items-center justify-center py-10">
+                  <div className="w-7 h-7 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : driverModalData.length === 0 ? (
+                <p className="text-gray-600 text-center py-8 text-sm">No drivers registered yet.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr>
+                        {['Driver No.', 'Name', 'Email', 'Assigned Vehicle', 'Added'].map(h => (
+                          <th key={h} className={thCls}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {driverModalData.map(d => (
+                        <tr key={d._id} className="hover:bg-white/2">
+                          <td className={tdCls}><span className="font-mono font-bold text-red-400">DRVR-{d.driverNo}</span></td>
+                          <td className={tdCls}><span className="font-medium text-white">{d.name}</span></td>
+                          <td className={tdCls}>{d.email}</td>
+                          <td className={tdCls}>{d.assignedVehicle || <span className="text-gray-600 italic">Unassigned</span>}</td>
+                          <td className={tdCls}>{new Date(d.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Vehicle Modal ── */}
       {vehicleModal && (
