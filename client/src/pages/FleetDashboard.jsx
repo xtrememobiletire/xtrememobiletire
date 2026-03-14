@@ -4,10 +4,56 @@ import {
   FaTruck, FaBuilding, FaPhone, FaEnvelope, FaMapMarkerAlt,
   FaSignOutAlt, FaCheckCircle, FaClock, FaTimesCircle,
   FaThLarge, FaCalendarPlus, FaListAlt, FaCar, FaPlus, FaTrash,
-  FaUserTie, FaEdit, FaTimes,
+  FaUserTie, FaEdit, FaTimes, FaFileInvoiceDollar, FaCheckDouble, FaDownload,
 } from 'react-icons/fa';
+import { downloadInvoicePDF } from '../utils/invoiceUtils';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
+
+const stripePromise = loadStripe('pk_test_51QkqKjLtI0CMESl4y2zPXGCtaeEssJHtV0bUb0t2Mfbkbq8EP8Ntk8RgyDaYSNxV5k1LrpLCbKW61PSAxxfPoSOW00oqN0Dy1j');
+
+/* ── Inline Stripe checkout form for invoice payment ── */
+function InvoiceCheckoutForm({ amount, invoiceId, onSuccess }) {
+  const stripe   = useStripe();
+  const elements = useElements();
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+
+  const handlePay = async (e) => {
+    e.preventDefault();
+    if (!stripe || !elements) return;
+    setLoading(true); setMessage('');
+    const { error, paymentIntent } = await stripe.confirmPayment({
+      elements,
+      confirmParams: { return_url: window.location.href },
+      redirect: 'if_required',
+    });
+    if (error) {
+      setMessage(error.message);
+    } else if (paymentIntent?.status === 'succeeded') {
+      try { await API.post(`/invoices/${invoiceId}/confirm-payment`, { paymentIntentId: paymentIntent.id }); }
+      catch { /* still call onSuccess */ }
+      onSuccess();
+    } else {
+      setMessage('Payment processing. Please wait…');
+    }
+    setLoading(false);
+  };
+
+  return (
+    <form onSubmit={handlePay} className="space-y-4">
+      <PaymentElement />
+      {message && <p className="text-sm text-red-400 bg-red-900/20 border border-red-600/30 rounded-lg p-3">{message}</p>}
+      <button type="submit" disabled={!stripe || loading}
+        className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white font-bold py-3 rounded-xl transition">
+        {loading ? 'Processing…' : `Pay $${parseFloat(amount).toFixed(2)}`}
+      </button>
+    </form>
+  );
+}
 import API from '../api';
 import logo from '../assets/xtrememobiletire.webp';
+import xtremeBlackLogo from '../assets/xtremeblack.png';
 
 const SERVICES = [
   'Tire Repair - Plug', 'Tire Repair - Stem', 'Tire Swap (On Rim)',
@@ -64,6 +110,15 @@ const FleetDashboard = () => {
   const [driverForm,     setDriverForm]     = useState({ name: '', email: '', assignedVehicle: '' });
   const [driverStatus,   setDriverStatus]   = useState({ loading: false, error: '' });
   const [editingDriver,  setEditingDriver]  = useState(null); // driver object being edited
+
+  // ── Invoice state ──
+  const [myInvoices,      setMyInvoices]      = useState([]);
+  const [invoicesLoading, setInvoicesLoading] = useState(false);
+  const [payingInvoice,   setPayingInvoice]   = useState(null);   // invoice being paid
+  const [clientSecret,    setClientSecret]    = useState('');
+  const [payStep,         setPayStep]         = useState('info'); // 'info' | 'stripe' | 'success'
+  const [payLoading,      setPayLoading]      = useState(false);
+  const [payError,        setPayError]        = useState('');
 
   useEffect(() => {
     const token = localStorage.getItem('xmt_token');
@@ -150,6 +205,48 @@ const FleetDashboard = () => {
       .finally(() => setDriversLoading(false));
   }, [tab]);
 
+  // ── Invoice handlers ──
+  useEffect(() => {
+    if (tab !== 'pending-invoices' && tab !== 'completed-invoices') return;
+    setInvoicesLoading(true);
+    API.get('/invoices/mine')
+      .then(res => setMyInvoices(res.data))
+      .catch(() => setMyInvoices([]))
+      .finally(() => setInvoicesLoading(false));
+  }, [tab]);
+
+  const pendingInvoiceCount   = myInvoices.filter(i => i.status === 'pending').length;
+  const completedInvoiceCount = myInvoices.filter(i => i.status === 'paid').length;
+
+  const handlePayNow = async (invoice) => {
+    setPayingInvoice(invoice);
+    setPayStep('info');
+    setPayError('');
+    setClientSecret('');
+  };
+
+  const handleInitStripe = async () => {
+    setPayLoading(true); setPayError('');
+    try {
+      const res = await API.post(`/invoices/${payingInvoice._id}/create-payment`, {});
+      setClientSecret(res.data.clientSecret);
+      setPayStep('stripe');
+    } catch (err) {
+      setPayError(err.response?.data?.message || 'Failed to initialize payment.');
+    } finally {
+      setPayLoading(false);
+    }
+  };
+
+  const handlePaymentSuccess = () => {
+    setPayStep('success');
+    setMyInvoices(prev => prev.map(i => i._id === payingInvoice._id ? { ...i, status: 'paid' } : i));
+  };
+
+  const closePayModal = () => {
+    setPayingInvoice(null); setClientSecret(''); setPayStep('info'); setPayError('');
+  };
+
   const handleAddDriver = async (e) => {
     e.preventDefault();
     setDriverStatus({ loading: true, error: '' });
@@ -228,11 +325,13 @@ const FleetDashboard = () => {
   const s = statusConfig[user.status] || statusConfig.pending;
 
   const TABS = [
-    { key: 'dashboard', label: 'Dashboard',           icon: <FaThLarge /> },
-    { key: 'vehicles',  label: 'Vehicles',             icon: <FaCar /> },
-    { key: 'drivers',   label: 'My Drivers',           icon: <FaUserTie /> },
-    { key: 'request',   label: 'Request New Service',  icon: <FaCalendarPlus /> },
-    { key: 'services',  label: 'Service Status',       icon: <FaListAlt /> },
+    { key: 'dashboard',           label: 'Dashboard',           icon: <FaThLarge /> },
+    { key: 'vehicles',            label: 'Vehicles',             icon: <FaCar /> },
+    { key: 'drivers',             label: 'My Drivers',           icon: <FaUserTie /> },
+    { key: 'request',             label: 'Request New Service',  icon: <FaCalendarPlus /> },
+    { key: 'services',            label: 'Service Status',       icon: <FaListAlt /> },
+    { key: 'pending-invoices',    label: 'Pending Invoices',     icon: <FaFileInvoiceDollar /> },
+    { key: 'completed-invoices',  label: 'Completed Invoices',   icon: <FaCheckDouble /> },
   ];
 
   return (
@@ -279,6 +378,11 @@ const FleetDashboard = () => {
                 {t.key === 'services' && unreadCount > 0 && (
                   <span className="bg-red-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0">
                     {unreadCount}
+                  </span>
+                )}
+                {t.key === 'pending-invoices' && pendingInvoiceCount > 0 && (
+                  <span className="bg-yellow-500 text-black text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0">
+                    {pendingInvoiceCount}
                   </span>
                 )}
               </button>
@@ -837,8 +941,200 @@ const FleetDashboard = () => {
             </div>
           )}
 
+          {/* ── Pending Invoices Tab ── */}
+          {tab === 'pending-invoices' && (
+            <div>
+              <h2 className="text-2xl font-bold mb-1 flex items-center gap-2">
+                <FaFileInvoiceDollar className="text-red-500" /> Pending Invoices
+              </h2>
+              <p className="text-gray-400 text-sm mb-6">Invoices sent to you by XtremeMobileTire that require payment.</p>
+              {invoicesLoading ? (
+                <div className="flex items-center justify-center py-20">
+                  <div className="w-8 h-8 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : myInvoices.filter(i => i.status === 'pending').length === 0 ? (
+                <div className="text-center py-20">
+                  <FaFileInvoiceDollar className="text-gray-700 text-5xl mx-auto mb-3" />
+                  <p className="text-gray-500">No pending invoices at this time.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {myInvoices.filter(i => i.status === 'pending').map(inv => (
+                    <div key={inv._id} className="bg-[#111] border border-yellow-600/30 rounded-2xl p-5">
+                      <div className="flex items-start justify-between gap-4 flex-wrap">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-mono font-bold text-red-400">{inv.invoiceNumber}</span>
+                            <span className="text-xs bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-2 py-0.5 rounded">Payment Pending</span>
+                          </div>
+                          <p className="text-white font-semibold">{inv.companyName}</p>
+                          {inv.clientName && <p className="text-gray-400 text-sm">{inv.clientName}{inv.vehicleInfo ? ` — ${inv.vehicleInfo}` : ''}</p>}
+                          <div className="flex gap-4 mt-2 text-xs text-gray-500">
+                            <span>Issued: {inv.issueDate}</span>
+                            <span>Due: {inv.dueDate}</span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-2xl font-black text-green-400">${(inv.grandTotal || 0).toFixed(2)}</p>
+                          <p className="text-xs text-gray-500 mt-0.5">Grand Total</p>
+                        </div>
+                      </div>
+                      <div className="border-t border-gray-800 mt-4 pt-4">
+                        <p className="text-sm text-gray-400 mb-3">
+                          💳 Payment can be given through <span className="text-white font-medium">bank transfer</span> or online via Stripe below.
+                        </p>
+                        <div className="flex gap-2 flex-wrap">
+                          <button onClick={() => handlePayNow(inv)}
+                            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-5 py-2.5 rounded-lg transition text-sm">
+                            Pay Now — ${(inv.grandTotal || 0).toFixed(2)}
+                          </button>
+                          <button onClick={() => downloadInvoicePDF(inv, xtremeBlackLogo)}
+                            className="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white px-4 py-2.5 rounded-lg transition text-sm">
+                            <FaDownload className="text-xs" /> Download PDF
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Completed Invoices Tab ── */}
+          {tab === 'completed-invoices' && (
+            <div>
+              <h2 className="text-2xl font-bold mb-1 flex items-center gap-2">
+                <FaCheckDouble className="text-green-500" /> Completed Invoices
+              </h2>
+              <p className="text-gray-400 text-sm mb-6">Invoices you have already paid.</p>
+              {invoicesLoading ? (
+                <div className="flex items-center justify-center py-20">
+                  <div className="w-8 h-8 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : myInvoices.filter(i => i.status === 'paid').length === 0 ? (
+                <div className="text-center py-20">
+                  <FaCheckDouble className="text-gray-700 text-5xl mx-auto mb-3" />
+                  <p className="text-gray-500">No completed invoices yet.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {myInvoices.filter(i => i.status === 'paid').map(inv => (
+                    <div key={inv._id} className="bg-[#111] border border-green-600/20 rounded-2xl p-5">
+                      <div className="flex items-center justify-between gap-4 flex-wrap">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-mono font-bold text-red-400">{inv.invoiceNumber}</span>
+                            <span className="text-xs bg-green-500/20 text-green-400 border border-green-500/30 px-2 py-0.5 rounded">Payment Completed</span>
+                          </div>
+                          <p className="text-white font-semibold">{inv.companyName}</p>
+                          <div className="flex gap-4 mt-1 text-xs text-gray-500">
+                            <span>Issued: {inv.issueDate}</span>
+                            <span>Paid: {inv.paidAt ? new Date(inv.paidAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</span>
+                          </div>
+                        </div>
+                        <p className="text-xl font-black text-green-400">${(inv.grandTotal || 0).toFixed(2)}</p>
+                      </div>
+                      <div className="border-t border-gray-800 mt-4 pt-4">
+                        <button onClick={() => downloadInvoicePDF(inv, xtremeBlackLogo)}
+                          className="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition text-sm">
+                          <FaDownload className="text-xs" /> Download PDF
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
         </main>
       </div>
+
+      {/* ── Pay Invoice Modal ── */}
+      {payingInvoice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}
+          onClick={e => { if (e.target === e.currentTarget && payStep !== 'stripe') closePayModal(); }}>
+          <div className="bg-[#111] border border-gray-800 rounded-2xl w-full max-w-md" style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.8)' }}>
+
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-800">
+              <div>
+                <p className="text-gray-500 text-xs uppercase tracking-widest mb-0.5">Invoice Payment</p>
+                <h3 className="text-white font-bold text-lg">{payingInvoice.invoiceNumber}</h3>
+              </div>
+              {payStep !== 'stripe' && (
+                <button onClick={closePayModal} className="text-gray-500 hover:text-red-400 transition text-2xl leading-none">×</button>
+              )}
+            </div>
+
+            <div className="px-6 py-6">
+              {payStep === 'info' && (
+                <div>
+                  <div className="bg-[#0a0a0a] border border-gray-800 rounded-xl p-4 mb-5">
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="text-gray-500">Company</span>
+                      <span className="text-white font-medium">{payingInvoice.companyName}</span>
+                    </div>
+                    {payingInvoice.clientName && (
+                      <div className="flex justify-between text-sm mb-2">
+                        <span className="text-gray-500">Client</span>
+                        <span className="text-white">{payingInvoice.clientName}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="text-gray-500">Due Date</span>
+                      <span className="text-white">{payingInvoice.dueDate}</span>
+                    </div>
+                    <div className="flex justify-between text-sm pt-2 border-t border-gray-800 mt-1">
+                      <span className="text-gray-400 font-semibold">Grand Total</span>
+                      <span className="text-green-400 font-black text-lg">${(payingInvoice.grandTotal || 0).toFixed(2)}</span>
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-400 mb-5">
+                    💳 You can pay this invoice through <strong className="text-white">bank transfer</strong> or click below to pay securely via Stripe.
+                  </p>
+                  {payError && <p className="text-red-400 text-sm mb-3 bg-red-900/20 border border-red-600/20 rounded-lg p-3">{payError}</p>}
+                  <button onClick={handleInitStripe} disabled={payLoading}
+                    className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white font-bold py-3 rounded-xl transition">
+                    {payLoading ? 'Loading…' : `Pay via Stripe — $${(payingInvoice.grandTotal || 0).toFixed(2)}`}
+                  </button>
+                </div>
+              )}
+
+              {payStep === 'stripe' && clientSecret && (
+                <div>
+                  <div className="flex justify-between items-center mb-5 pb-4 border-b border-gray-800">
+                    <div>
+                      <p className="text-xs text-gray-500">Invoice</p>
+                      <p className="text-white font-medium">{payingInvoice.invoiceNumber}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-gray-500">Total</p>
+                      <p className="text-xl font-black text-red-500">${(payingInvoice.grandTotal || 0).toFixed(2)}</p>
+                    </div>
+                  </div>
+                  <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'night', variables: { colorPrimary: '#dc2626' } } }}>
+                    <InvoiceCheckoutForm amount={payingInvoice.grandTotal} invoiceId={payingInvoice._id} onSuccess={handlePaymentSuccess} />
+                  </Elements>
+                </div>
+              )}
+
+              {payStep === 'success' && (
+                <div className="text-center py-6">
+                  <div className="text-5xl mb-4">✅</div>
+                  <h3 className="text-xl font-bold text-green-400 mb-2">Payment Successful!</h3>
+                  <p className="text-gray-400 text-sm mb-6">Invoice {payingInvoice.invoiceNumber} has been paid. It will now appear in your Completed Invoices.</p>
+                  <button onClick={() => { closePayModal(); setTab('completed-invoices'); }}
+                    className="bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-2.5 rounded-xl transition">
+                    View Completed Invoices
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

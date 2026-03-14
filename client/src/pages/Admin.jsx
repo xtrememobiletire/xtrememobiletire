@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
-import { FaEnvelope, FaLock, FaArrowRight, FaEye, FaEyeSlash, FaCheck, FaTimes, FaCar, FaTrash, FaUserTie } from 'react-icons/fa';
+import { FaEnvelope, FaLock, FaArrowRight, FaEye, FaEyeSlash, FaCheck, FaTimes, FaCar, FaTrash, FaUserTie, FaFileInvoiceDollar, FaPlus, FaPaperPlane, FaChevronLeft, FaDownload, FaEye as FaEyeView, FaCheckDouble } from 'react-icons/fa';
 import API from '../api';
 import logo from '../assets/xtrememobiletire.webp';
+import xtremeBlackLogo from '../assets/xtremeblack.png';
+import { downloadInvoicePDF } from '../utils/invoiceUtils';
 
 const STATUS_COLORS = {
   pending:   'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
@@ -20,6 +22,136 @@ const thCls = 'text-left text-xs font-semibold text-gray-400 uppercase tracking-
 const tdCls = 'px-4 py-3 text-sm text-gray-300 border-b border-gray-800/60';
 const inputCls = 'w-full bg-black border border-gray-700 focus:border-red-600 text-white placeholder-gray-600 px-4 py-3 rounded-lg text-sm outline-none transition';
 const labelCls = 'block text-gray-400 text-xs font-medium mb-1.5 uppercase tracking-wide';
+
+/* ── Invoice Preview Component ── */
+const InvoicePreview = ({ form, items, tax, taxPercent, logo }) => {
+  const subTotal   = items.reduce((s, i) => s + (parseFloat(i.price) || 0) * (parseFloat(i.qty) || 0), 0);
+  const taxAmt     = parseFloat(tax) || 0;
+  const grandTotal = subTotal + taxAmt;
+  const taxPct     = parseFloat(taxPercent) || 0;
+
+  // Pad to at least 5 rows
+  const displayItems = [...items];
+  while (displayItems.length < 5) displayItems.push({ no: '', description: '', price: '', qty: '' });
+
+  return (
+    <div className="bg-white text-gray-900 rounded-xl overflow-hidden shadow-2xl" style={{ fontFamily: 'Arial, sans-serif' }}>
+
+      {/* Header */}
+      <div className="flex justify-between items-start px-8 pt-8 pb-5">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Client Invoice</h1>
+          <p className="text-sm text-gray-500 mt-1">Invoice No # {form.invoiceNumber || '—'}</p>
+        </div>
+        <div>
+          <img src={logo} alt="Xtreme Mobile Tire" className="h-16 w-auto object-contain" />
+        </div>
+      </div>
+
+      {/* Info Row — 3 columns */}
+      <div className="px-8 pb-5 grid grid-cols-3 gap-5 border-t border-b border-gray-200 py-4">
+        {/* Client info */}
+        <div>
+          <p className="font-bold text-gray-900 text-sm">{form.clientName || form.companyName || '—'}</p>
+          {form.companyName && form.clientName && form.companyName !== form.clientName && (
+            <p className="text-xs text-gray-600 mt-0.5">{form.companyName}</p>
+          )}
+          {form.clientPhone   && <p className="text-xs text-gray-700 mt-0.5">{form.clientPhone}</p>}
+          {form.clientAddress && <p className="text-xs text-gray-700 mt-0.5">{form.clientAddress}</p>}
+          {form.driverName    && <p className="text-xs text-gray-600 mt-0.5">Driver: {form.driverName}</p>}
+        </div>
+        {/* Dates */}
+        <div className="space-y-3">
+          <div>
+            <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide">Issue Date</p>
+            <p className="text-sm text-gray-800 font-medium mt-0.5">{form.issueDate || '—'}</p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide">Due Date</p>
+            <p className="text-sm text-gray-800 font-medium mt-0.5">{form.dueDate || '—'}</p>
+          </div>
+        </div>
+        {/* Company info */}
+        <div>
+          <p className="font-bold text-sm text-gray-900">XTREME MOBILE TIRE</p>
+          <p className="text-xs text-gray-500 mt-0.5">857 Winterton Way, Mississauga</p>
+          <p className="text-xs text-gray-500">ON L5V 1Z5 Canada</p>
+          <p className="text-xs text-gray-600 mt-1.5">HST# 799787635RT001</p>
+        </div>
+      </div>
+
+      {/* Items Table */}
+      <div className="px-8 pt-4 pb-2">
+        <table className="w-full border-collapse border border-gray-200">
+          <thead>
+            <tr>
+              <th className="text-center px-3 py-2 text-xs font-bold border border-gray-300 bg-gray-50 w-12">No</th>
+              <th className="text-left px-3 py-2 text-xs font-bold border border-gray-300 bg-gray-50">Item Details</th>
+              <th className="text-right px-3 py-2 text-xs font-bold border border-gray-300 bg-gray-50 w-24">Price</th>
+              <th className="text-right px-3 py-2 text-xs font-bold border border-gray-300 bg-gray-50 w-16">Qty</th>
+              <th className="text-right px-3 py-2 text-xs font-bold border border-gray-300 bg-gray-50 w-28">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {displayItems.map((item, i) => (
+              <tr key={i}>
+                <td className="px-3 py-2.5 text-sm text-center text-gray-600 border border-gray-200">{item.no || ''}</td>
+                <td className="px-3 py-2.5 text-sm text-gray-800 border border-gray-200">{item.description || ''}</td>
+                <td className="px-3 py-2.5 text-sm text-gray-700 text-right border border-gray-200">
+                  {item.price ? `$${(parseFloat(item.price) || 0).toFixed(2)}` : ''}
+                </td>
+                <td className="px-3 py-2.5 text-sm text-gray-700 text-right border border-gray-200">
+                  {item.qty ? (parseFloat(item.qty) || 0) : ''}
+                </td>
+                <td className="px-3 py-2.5 text-sm font-medium text-gray-900 text-right border border-gray-200">
+                  {item.price && item.qty ? `$${((parseFloat(item.price) || 0) * (parseFloat(item.qty) || 0)).toFixed(2)}` : ''}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Totals */}
+      <div className="px-8 pt-2 pb-6 flex justify-end">
+        <table className="border-collapse" style={{ width: '260px' }}>
+          <tbody>
+            <tr>
+              <td className="py-1.5 px-3 text-sm text-gray-500 text-right border border-gray-200">Sub Total</td>
+              <td className="py-1.5 px-3 text-sm text-right font-medium text-gray-800 border border-gray-200">${subTotal.toFixed(2)}</td>
+            </tr>
+            <tr className="bg-blue-50">
+              <td className="py-1.5 px-3 text-sm text-gray-700 font-semibold text-right border border-blue-200">Net Total</td>
+              <td className="py-1.5 px-3 text-sm text-right font-bold text-blue-700 border border-blue-200">${subTotal.toFixed(2)}</td>
+            </tr>
+            <tr>
+              <td className="py-1.5 px-3 text-sm text-gray-500 text-right border border-gray-200">
+                Total Tax{taxPct > 0 ? ` ${taxPct}%` : ''}
+              </td>
+              <td className="py-1.5 px-3 text-sm text-right font-medium text-gray-800 border border-gray-200">${taxAmt.toFixed(2)}</td>
+            </tr>
+            <tr className="bg-blue-50">
+              <td className="py-1.5 px-3 text-sm font-bold text-gray-900 text-right border border-blue-200">Grand Total</td>
+              <td className="py-1.5 px-3 text-sm text-right font-bold text-blue-700 border border-blue-200 text-base">${grandTotal.toFixed(2)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* Footer */}
+      <div className="mx-8 border-t border-gray-200 pt-4 pb-3">
+        <p className="text-xs font-bold text-gray-900 mb-1">Terms and Conditions</p>
+        <p className="text-xs text-gray-500">
+          Please Send payment via E-transfer or bank Transfer to:{' '}
+          <span className="text-blue-600">Payments@Calltire.com</span>
+        </p>
+      </div>
+      <div className="mx-8 border-t border-gray-100 py-3 text-center">
+        <p className="text-xs text-gray-400">Assigned Code : {form.invoiceNumber || '—'} 2025 : XTREME Mobile -FixTire</p>
+      </div>
+    </div>
+  );
+};
 
 /* ── Admin Login Form ── */
 const AdminLogin = ({ onLogin }) => {
@@ -138,24 +270,141 @@ export default function Admin() {
   const [newStatusLabel, setNewStatusLabel] = useState('');
   const [statusAdding,   setStatusAdding]   = useState(false);
 
+  // ── Invoice state ──
+  const [invoiceView,    setInvoiceView]    = useState('list');   // 'list' | 'create'
+  const [invoiceStep,    setInvoiceStep]    = useState(1);        // 1 | 2 | 3
+  const [invoiceForm,    setInvoiceForm]    = useState({
+    invoiceNumber: '', companyName: '', issueDate: '', dueDate: '',
+    driverName: '', clientName: '', clientPhone: '', clientAddress: '', vehicleInfo: '',
+  });
+  const [invoiceItems,   setInvoiceItems]   = useState([{ no: 1, description: '', price: '', qty: '', total: 0 }]);
+  const [invoiceTax,     setInvoiceTax]     = useState('');
+  const [allInvoices,    setAllInvoices]    = useState([]);
+  const [invoicesLoading,setInvoicesLoading]= useState(false);
+  const [usersList,      setUsersList]      = useState([]);
+  const [usersLoading,   setUsersLoading]   = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState('');
+  const [invoiceGenBusy, setInvoiceGenBusy] = useState(false);
+  const [invoiceSendBusy,setInvoiceSendBusy]= useState(false);
+  const [invoiceError,   setInvoiceError]   = useState('');
+  const [viewingInvoice, setViewingInvoice] = useState(null); // invoice preview modal
+
   const loadStatuses = () =>
     API.get('/admin/custom-statuses').then(r => setAllStatuses(r.data)).catch(() => {});
 
-  // Load stats when logged in
+  // ── Invoice helpers ──
+  const loadAllInvoices = async () => {
+    setInvoicesLoading(true);
+    try   { const r = await API.get('/invoices/admin/all'); setAllInvoices(r.data); }
+    catch { setAllInvoices([]); }
+    finally { setInvoicesLoading(false); }
+  };
+
+  const loadUsersList = async () => {
+    setUsersLoading(true);
+    try   { const r = await API.get('/invoices/admin/users-list'); setUsersList(r.data); }
+    catch { setUsersList([]); }
+    finally { setUsersLoading(false); }
+  };
+
+  const invoiceSubTotal   = invoiceItems.reduce((s, i) => s + (parseFloat(i.price) || 0) * (parseFloat(i.qty) || 0), 0);
+  const invoiceTaxPct     = parseFloat(invoiceTax) || 0;
+  const invoiceTaxAmt     = invoiceSubTotal * (invoiceTaxPct / 100);
+  const invoiceGrandTotal = invoiceSubTotal + invoiceTaxAmt;
+
+  const updateInvoiceItem = (idx, field, val) =>
+    setInvoiceItems(prev => prev.map((item, i) => i === idx ? { ...item, [field]: val } : item));
+
+  const addInvoiceItem = () =>
+    setInvoiceItems(prev => [...prev, { no: prev.length + 1, description: '', price: '', qty: '', total: 0 }]);
+
+  const removeInvoiceItem = (idx) =>
+    setInvoiceItems(prev => prev.filter((_, i) => i !== idx).map((item, i) => ({ ...item, no: i + 1 })));
+
+  const resetInvoiceForm = () => {
+    setInvoiceForm({ invoiceNumber: '', companyName: '', issueDate: '', dueDate: '', driverName: '', clientName: '', clientPhone: '', clientAddress: '', vehicleInfo: '' });
+    setInvoiceItems([{ no: 1, description: '', price: '', qty: '', total: 0 }]);
+    setInvoiceTax('');
+    setSelectedUserId('');
+    setInvoiceError('');
+    setInvoiceStep(1);
+  };
+
+  const handleGeneratePreview = () => {
+    setInvoiceError('');
+    const { invoiceNumber, companyName, issueDate, dueDate } = invoiceForm;
+    if (!invoiceNumber || !companyName || !issueDate || !dueDate) {
+      setInvoiceError('Please fill in Invoice #, Company Name, Issue Date and Due Date.');
+      return;
+    }
+    setInvoiceStep(2);
+  };
+
+  const handleSendInvoice = async () => {
+    if (!selectedUserId) { setInvoiceError('Please select a recipient.'); return; }
+    setInvoiceSendBusy(true);
+    setInvoiceError('');
+    try {
+      const user = usersList.find(u => u.id === selectedUserId);
+      const createRes = await API.post('/invoices/admin/create', {
+        ...invoiceForm,
+        items: invoiceItems.map(item => ({
+          ...item,
+          price: parseFloat(item.price) || 0,
+          qty:   parseFloat(item.qty)   || 0,
+          total: (parseFloat(item.price) || 0) * (parseFloat(item.qty) || 0),
+        })),
+        subTotal:   invoiceSubTotal,
+        netTotal:   invoiceSubTotal,
+        tax:        invoiceTaxAmt,
+        taxPercent: invoiceTaxPct,
+        grandTotal: invoiceGrandTotal,
+      });
+      await API.post(`/invoices/admin/${createRes.data._id}/send`, {
+        recipientId:    user.id,
+        recipientType:  user.type,
+        recipientName:  user.name,
+        recipientEmail: user.email,
+      });
+      setInvoiceView('list');
+      resetInvoiceForm();
+      loadAllInvoices();
+    } catch (err) {
+      setInvoiceError(err.response?.data?.message || 'Failed to send invoice.');
+    } finally {
+      setInvoiceSendBusy(false);
+    }
+  };
+
+  const deleteInvoice = async (id) => {
+    if (!confirm('Delete this invoice?')) return;
+    await API.delete(`/invoices/admin/${id}`);
+    setAllInvoices(prev => prev.filter(inv => inv._id !== id));
+  };
+
+  // Load stats + invoice counts when logged in
   useEffect(() => {
     if (!isAdmin) return;
     API.get('/admin/stats').then(r => setStats(r.data)).catch(() => {});
+    loadAllInvoices(); // preload for sidebar badge counts
   }, [isAdmin]);
 
   // Load tab data
+  const INVOICE_TABS = ['invoices', 'admin-pending', 'admin-completed'];
   useEffect(() => {
-    if (!isAdmin || tab === 'dashboard') return;
+    if (!isAdmin || tab === 'dashboard' || INVOICE_TABS.includes(tab)) return;
     setLoading(true);
     API.get(`/admin/${tab}`)
       .then(r => setData(r.data))
       .catch(() => setData([]))
       .finally(() => setLoading(false));
     if (tab === 'service-requests') loadStatuses();
+  }, [tab, isAdmin]);
+
+  // Load invoices for any invoice tab
+  useEffect(() => {
+    if (!isAdmin || !INVOICE_TABS.includes(tab)) return;
+    loadAllInvoices();
   }, [tab, isAdmin]);
 
   const handleAddStatus = async () => {
@@ -217,6 +466,9 @@ export default function Admin() {
     { key: 'fleets',           label: 'Fleet Signups' },
     { key: 'members',          label: 'Members' },
     { key: 'service-requests', label: 'Services' },
+    { key: 'invoices',         label: 'Invoices' },
+    { key: 'admin-pending',    label: 'Pending Invoices' },
+    { key: 'admin-completed',  label: 'Completed Invoices' },
   ];
 
   return (
@@ -260,6 +512,16 @@ export default function Admin() {
                 )}
                 {t.key === 'service-requests' && stats?.pendingServices > 0 && (
                   <span className="ml-2 bg-red-600 text-white text-xs px-1.5 py-0.5 rounded-full">{stats.pendingServices}</span>
+                )}
+                {t.key === 'admin-pending' && allInvoices.filter(i => i.status === 'pending').length > 0 && (
+                  <span className="ml-2 bg-yellow-500 text-black text-xs px-1.5 py-0.5 rounded-full font-bold">
+                    {allInvoices.filter(i => i.status === 'pending').length}
+                  </span>
+                )}
+                {t.key === 'admin-completed' && allInvoices.filter(i => i.status === 'paid').length > 0 && (
+                  <span className="ml-2 bg-green-600 text-white text-xs px-1.5 py-0.5 rounded-full font-bold">
+                    {allInvoices.filter(i => i.status === 'paid').length}
+                  </span>
                 )}
               </button>
             ))}
@@ -652,8 +914,500 @@ export default function Admin() {
             </div>
           )}
 
+          {/* ── Invoices ── */}
+          {tab === 'invoices' && (
+            <div>
+              {invoiceView === 'list' ? (
+                /* All Invoices List */
+                <div>
+                  <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+                    <h2 className="text-2xl font-bold flex items-center gap-2">
+                      <FaFileInvoiceDollar className="text-red-500" /> Invoices ({allInvoices.length})
+                    </h2>
+                    <button
+                      onClick={() => { setInvoiceView('create'); resetInvoiceForm(); }}
+                      className="flex items-center gap-1.5 text-xs bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition font-semibold"
+                    >
+                      <FaPlus /> New Invoice
+                    </button>
+                  </div>
+
+                  {invoicesLoading ? <p className="text-gray-500">Loading...</p> : (
+                    <div className="bg-[#111] border border-gray-800 rounded-xl overflow-x-auto">
+                      <table className="w-full min-w-[900px]">
+                        <thead>
+                          <tr>
+                            {['Invoice #','Company','Client','Issue Date','Due Date','Grand Total','Status','Sent To','Actions'].map(h => (
+                              <th key={h} className={thCls}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {allInvoices.map(inv => (
+                            <tr key={inv._id} className="hover:bg-white/5 cursor-pointer" onClick={() => setViewingInvoice(inv)}>
+                              <td className={tdCls}><span className="font-mono font-bold text-red-400">{inv.invoiceNumber}</span></td>
+                              <td className={tdCls}>{inv.companyName}</td>
+                              <td className={tdCls}>{inv.clientName || '—'}</td>
+                              <td className={tdCls}>{inv.issueDate}</td>
+                              <td className={tdCls}>{inv.dueDate}</td>
+                              <td className={tdCls}><span className="font-bold text-green-400">${(inv.grandTotal || 0).toFixed(2)}</span></td>
+                              <td className={tdCls}>
+                                <span className={`text-xs px-2 py-0.5 rounded border capitalize ${
+                                  inv.status === 'paid'    ? 'bg-green-500/20 text-green-400 border-green-500/30' :
+                                  inv.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' :
+                                  'bg-gray-500/20 text-gray-400 border-gray-500/30'
+                                }`}>{inv.status === 'paid' ? 'Payment Completed' : inv.status}</span>
+                              </td>
+                              <td className={tdCls}>{inv.recipientName || <span className="text-gray-600 italic">Not sent</span>}</td>
+                              <td className={tdCls} onClick={e => e.stopPropagation()}>
+                                <div className="flex gap-1">
+                                  <button onClick={() => downloadInvoicePDF(inv, xtremeBlackLogo)} title="Download PDF"
+                                    className="text-xs bg-blue-600/80 hover:bg-blue-700 px-2 py-1 rounded flex items-center gap-1">
+                                    <FaDownload className="text-xs" />
+                                  </button>
+                                  <button onClick={() => deleteInvoice(inv._id)} className="text-xs bg-red-600/80 hover:bg-red-700 px-2 py-1 rounded">Delete</button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                          {!allInvoices.length && (
+                            <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-600">No invoices yet. Click "New Invoice" to create one.</td></tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Invoice Creator — 3-step stepper */
+                <div>
+                  {/* Header */}
+                  <div className="flex items-center gap-3 mb-6">
+                    <button onClick={() => { setInvoiceView('list'); resetInvoiceForm(); }}
+                      className="text-gray-400 hover:text-white transition p-1.5 rounded-lg hover:bg-white/5">
+                      <FaChevronLeft />
+                    </button>
+                    <h2 className="text-2xl font-bold">Create Invoice</h2>
+                  </div>
+
+                  {/* Step indicators */}
+                  <div className="flex items-center mb-8">
+                    {[
+                      { n: 1, label: 'Fill Details' },
+                      { n: 2, label: 'Preview' },
+                      { n: 3, label: 'Send' },
+                    ].map(({ n, label }, i) => (
+                      <div key={n} className="flex items-center">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition ${
+                          invoiceStep >= n ? 'bg-red-600 text-white' : 'bg-gray-800 text-gray-500'
+                        }`}>{n}</div>
+                        <span className={`ml-2 text-sm font-medium transition ${invoiceStep >= n ? 'text-white' : 'text-gray-500'}`}>{label}</span>
+                        {i < 2 && <div className={`w-12 h-px mx-3 transition ${invoiceStep > n ? 'bg-red-600' : 'bg-gray-700'}`} />}
+                      </div>
+                    ))}
+                  </div>
+
+                  {invoiceError && (
+                    <div className="mb-4 bg-red-600/10 border border-red-600/30 text-red-400 text-sm px-4 py-3 rounded-lg">{invoiceError}</div>
+                  )}
+
+                  {/* ── STEP 1: Form ── */}
+                  {invoiceStep === 1 && (
+                    <div className="bg-[#111] border border-gray-800 rounded-2xl p-6">
+                      <div className="grid grid-cols-2 gap-5 mb-6">
+                        <div>
+                          <label className={labelCls}>Invoice Number *</label>
+                          <input value={invoiceForm.invoiceNumber}
+                            onChange={e => setInvoiceForm(p => ({ ...p, invoiceNumber: e.target.value }))}
+                            placeholder="e.g. INV-001"
+                            className={inputCls} />
+                        </div>
+                        <div>
+                          <label className={labelCls}>Company Name *</label>
+                          <input value={invoiceForm.companyName}
+                            onChange={e => setInvoiceForm(p => ({ ...p, companyName: e.target.value }))}
+                            placeholder="Client company name"
+                            className={inputCls} />
+                        </div>
+                        <div>
+                          <label className={labelCls}>Issue Date *</label>
+                          <input type="date" value={invoiceForm.issueDate}
+                            onChange={e => setInvoiceForm(p => ({ ...p, issueDate: e.target.value }))}
+                            className={inputCls} />
+                        </div>
+                        <div>
+                          <label className={labelCls}>Due Date *</label>
+                          <input type="date" value={invoiceForm.dueDate}
+                            onChange={e => setInvoiceForm(p => ({ ...p, dueDate: e.target.value }))}
+                            className={inputCls} />
+                        </div>
+                        <div>
+                          <label className={labelCls}>Client Name</label>
+                          <input value={invoiceForm.clientName}
+                            onChange={e => setInvoiceForm(p => ({ ...p, clientName: e.target.value }))}
+                            placeholder="e.g. Mr. John Smith"
+                            className={inputCls} />
+                        </div>
+                        <div>
+                          <label className={labelCls}>Client Phone</label>
+                          <input value={invoiceForm.clientPhone}
+                            onChange={e => setInvoiceForm(p => ({ ...p, clientPhone: e.target.value }))}
+                            placeholder="e.g. (416) 555-0123"
+                            className={inputCls} />
+                        </div>
+                        <div className="col-span-2">
+                          <label className={labelCls}>Client Address</label>
+                          <input value={invoiceForm.clientAddress}
+                            onChange={e => setInvoiceForm(p => ({ ...p, clientAddress: e.target.value }))}
+                            placeholder="e.g. 123 Main St, Toronto ON Canada"
+                            className={inputCls} />
+                        </div>
+                        <div>
+                          <label className={labelCls}>Driver Name <span className="text-gray-600 normal-case">(optional)</span></label>
+                          <input value={invoiceForm.driverName}
+                            onChange={e => setInvoiceForm(p => ({ ...p, driverName: e.target.value }))}
+                            placeholder="Driver name (optional)"
+                            className={inputCls} />
+                        </div>
+                        <div>
+                          <label className={labelCls}>Year / Make & Model <span className="text-gray-600 normal-case">(optional)</span></label>
+                          <input value={invoiceForm.vehicleInfo}
+                            onChange={e => setInvoiceForm(p => ({ ...p, vehicleInfo: e.target.value }))}
+                            placeholder="e.g. 2022 Ford F-150"
+                            className={inputCls} />
+                        </div>
+                      </div>
+
+                      {/* Services / Line Items */}
+                      <div className="border-t border-gray-800 pt-5 mb-5">
+                        <div className="flex items-center justify-between mb-3">
+                          <p className="text-gray-300 text-sm font-semibold uppercase tracking-wide">Services</p>
+                          <button onClick={addInvoiceItem}
+                            className="flex items-center gap-1 text-xs bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg transition font-semibold">
+                            <FaPlus className="text-xs" /> Add Row
+                          </button>
+                        </div>
+
+                        <div className="overflow-x-auto">
+                          <table className="w-full min-w-[640px]">
+                            <thead>
+                              <tr className="border-b border-gray-700">
+                                {['No.','Item Details','Price ($)','Qty','Total',''].map(h => (
+                                  <th key={h} className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 py-2">{h}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {invoiceItems.map((item, i) => (
+                                <tr key={i} className="border-b border-gray-800/50">
+                                  <td className="px-3 py-2 text-sm text-gray-500 w-10">{item.no}</td>
+                                  <td className="px-3 py-2 w-1/3">
+                                    <input value={item.description}
+                                      onChange={e => updateInvoiceItem(i, 'description', e.target.value)}
+                                      placeholder="Item description"
+                                      className="w-full bg-black border border-gray-700 focus:border-red-600 text-white placeholder-gray-600 px-3 py-2 rounded text-sm outline-none transition" />
+                                  </td>
+                                  <td className="px-3 py-2 w-24">
+                                    <input type="number" min="0" step="0.01" value={item.price}
+                                      onChange={e => updateInvoiceItem(i, 'price', e.target.value)}
+                                      placeholder="0.00"
+                                      className="w-full bg-black border border-gray-700 focus:border-red-600 text-white placeholder-gray-600 px-3 py-2 rounded text-sm outline-none transition" />
+                                  </td>
+                                  <td className="px-3 py-2 w-16">
+                                    <input type="number" min="0" step="1" value={item.qty}
+                                      onChange={e => updateInvoiceItem(i, 'qty', e.target.value)}
+                                      placeholder="1"
+                                      className="w-full bg-black border border-gray-700 focus:border-red-600 text-white placeholder-gray-600 px-3 py-2 rounded text-sm outline-none transition" />
+                                  </td>
+                                  <td className="px-3 py-2 text-sm font-medium text-green-400 w-24">
+                                    ${((parseFloat(item.price) || 0) * (parseFloat(item.qty) || 0)).toFixed(2)}
+                                  </td>
+                                  <td className="px-3 py-2">
+                                    {invoiceItems.length > 1 && (
+                                      <button onClick={() => removeInvoiceItem(i)}
+                                        className="text-gray-600 hover:text-red-400 transition text-lg leading-none">×</button>
+                                    )}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                      {/* Totals */}
+                      <div className="flex justify-end">
+                        <div className="w-64 space-y-2">
+                          <div className="flex justify-between text-sm text-gray-400">
+                            <span>Sub Total</span>
+                            <span className="text-white font-medium">${invoiceSubTotal.toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between text-sm text-gray-400">
+                            <span>Net Total</span>
+                            <span className="text-white font-medium">${invoiceSubTotal.toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm text-gray-400">
+                            <span>Tax %</span>
+                            <div className="flex items-center gap-1">
+                              <input type="number" min="0" max="100" step="0.5" value={invoiceTax}
+                                onChange={e => setInvoiceTax(e.target.value)}
+                                placeholder="0"
+                                className="w-20 bg-black border border-gray-700 focus:border-red-600 text-white placeholder-gray-600 px-2 py-1 rounded text-sm outline-none transition text-right" />
+                              <span className="text-gray-500">%</span>
+                            </div>
+                          </div>
+                          <div className="flex justify-between text-xs text-gray-600">
+                            <span>Tax Amount</span>
+                            <span>${invoiceTaxAmt.toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between text-base font-bold pt-2 border-t border-gray-700">
+                            <span className="text-white">Grand Total</span>
+                            <span className="text-red-400 text-lg">${invoiceGrandTotal.toFixed(2)}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Generate Button */}
+                      <div className="mt-6 flex justify-end">
+                        <button onClick={handleGeneratePreview}
+                          disabled={invoiceGenBusy}
+                          className="flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white font-bold px-8 py-3 rounded-lg transition">
+                          {invoiceGenBusy ? 'Generating...' : 'Generate Invoice →'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── STEP 2: Preview ── */}
+                  {invoiceStep === 2 && (
+                    <div>
+                      <div className="max-w-3xl mx-auto">
+                        <InvoicePreview form={invoiceForm} items={invoiceItems} tax={invoiceTaxAmt} taxPercent={invoiceTaxPct} logo={xtremeBlackLogo} />
+                      </div>
+                      <div className="flex items-center justify-between mt-6 max-w-3xl mx-auto">
+                        <button onClick={() => setInvoiceStep(1)}
+                          className="flex items-center gap-2 text-gray-400 hover:text-white transition border border-gray-700 hover:border-gray-500 px-4 py-2.5 rounded-lg text-sm">
+                          <FaChevronLeft className="text-xs" /> Back to Edit
+                        </button>
+                        <button onClick={() => { setInvoiceStep(3); loadUsersList(); }}
+                          className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-2.5 rounded-lg transition">
+                          <FaPaperPlane className="text-xs" /> Send To →
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── STEP 3: Send ── */}
+                  {invoiceStep === 3 && (
+                    <div className="max-w-xl mx-auto">
+                      <div className="bg-[#111] border border-gray-800 rounded-2xl p-6">
+                        <h3 className="text-white font-bold text-lg mb-1">Send Invoice</h3>
+                        <p className="text-gray-500 text-sm mb-5">Select a registered user to send this invoice to.</p>
+
+                        {usersLoading ? (
+                          <div className="flex items-center justify-center py-10">
+                            <div className="w-7 h-7 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                          </div>
+                        ) : usersList.length === 0 ? (
+                          <p className="text-gray-600 text-center py-6 text-sm">No approved users found.</p>
+                        ) : (
+                          <div className="space-y-2 max-h-80 overflow-y-auto pr-1 mb-5">
+                            {usersList.map(u => (
+                              <label key={u.id} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition ${
+                                selectedUserId === u.id
+                                  ? 'border-red-600 bg-red-600/10'
+                                  : 'border-gray-800 hover:border-gray-600 bg-[#0a0a0a]'
+                              }`}>
+                                <input type="radio" name="recipient" value={u.id}
+                                  checked={selectedUserId === u.id}
+                                  onChange={() => setSelectedUserId(u.id)}
+                                  className="accent-red-600" />
+                                <div className="flex-1">
+                                  <p className="text-white text-sm font-medium">{u.name}</p>
+                                  <p className="text-gray-500 text-xs">{u.email}</p>
+                                </div>
+                                <span className={`text-xs px-2 py-0.5 rounded border capitalize ${
+                                  u.type === 'fleet'
+                                    ? 'bg-orange-500/20 text-orange-400 border-orange-500/30'
+                                    : 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+                                }`}>{u.type}</span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-between border-t border-gray-800 pt-4">
+                          <button onClick={() => setInvoiceStep(2)}
+                            className="flex items-center gap-2 text-gray-400 hover:text-white transition text-sm">
+                            <FaChevronLeft className="text-xs" /> Back
+                          </button>
+                          <button onClick={handleSendInvoice}
+                            disabled={invoiceSendBusy || !selectedUserId}
+                            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold px-6 py-2.5 rounded-lg transition text-sm">
+                            {invoiceSendBusy ? 'Sending...' : <><FaPaperPlane className="text-xs" /> Send Invoice</>}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Admin Pending Invoices Tab ── */}
+          {tab === 'admin-pending' && (
+            <div>
+              <h2 className="text-2xl font-bold mb-1 flex items-center gap-2">
+                <FaFileInvoiceDollar className="text-yellow-500" /> Pending Invoices ({allInvoices.filter(i => i.status === 'pending').length})
+              </h2>
+              <p className="text-gray-400 text-sm mb-6">Invoices sent to users awaiting payment.</p>
+              {invoicesLoading ? <p className="text-gray-500">Loading...</p> : (
+                <div className="space-y-4">
+                  {allInvoices.filter(i => i.status === 'pending').length === 0 ? (
+                    <div className="text-center py-20">
+                      <FaFileInvoiceDollar className="text-gray-700 text-5xl mx-auto mb-3" />
+                      <p className="text-gray-500">No pending invoices.</p>
+                    </div>
+                  ) : allInvoices.filter(i => i.status === 'pending').map(inv => (
+                    <div key={inv._id} className="bg-[#111] border border-yellow-600/30 rounded-2xl p-5">
+                      <div className="flex items-start justify-between gap-4 flex-wrap">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-mono font-bold text-red-400">{inv.invoiceNumber}</span>
+                            <span className="text-xs bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-2 py-0.5 rounded">Payment Pending</span>
+                          </div>
+                          <p className="text-white font-semibold">{inv.companyName}</p>
+                          {inv.clientName && <p className="text-gray-400 text-sm">{inv.clientName}{inv.vehicleInfo ? ` — ${inv.vehicleInfo}` : ''}</p>}
+                          <div className="flex gap-4 mt-2 text-xs text-gray-500">
+                            <span>Issued: {inv.issueDate}</span>
+                            <span>Due: {inv.dueDate}</span>
+                            <span>Sent to: <span className="text-gray-300">{inv.recipientName || '—'}</span></span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-2xl font-black text-green-400">${(inv.grandTotal || 0).toFixed(2)}</p>
+                        </div>
+                      </div>
+                      <div className="border-t border-gray-800 mt-4 pt-4 flex gap-2">
+                        <button onClick={() => setViewingInvoice(inv)}
+                          className="flex items-center gap-1.5 text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition">
+                          <FaEyeView className="text-xs" /> View Invoice
+                        </button>
+                        <button onClick={() => downloadInvoicePDF(inv, xtremeBlackLogo)}
+                          className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg transition">
+                          <FaDownload className="text-xs" /> Download PDF
+                        </button>
+                        <button onClick={() => deleteInvoice(inv._id)}
+                          className="flex items-center gap-1.5 text-xs bg-red-600/80 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg transition ml-auto">
+                          <FaTrash className="text-xs" /> Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Admin Completed Invoices Tab ── */}
+          {tab === 'admin-completed' && (
+            <div>
+              <h2 className="text-2xl font-bold mb-1 flex items-center gap-2">
+                <FaCheckDouble className="text-green-500" /> Completed Invoices ({allInvoices.filter(i => i.status === 'paid').length})
+              </h2>
+              <p className="text-gray-400 text-sm mb-6">Invoices that have been paid by users.</p>
+              {invoicesLoading ? <p className="text-gray-500">Loading...</p> : (
+                <div className="space-y-3">
+                  {allInvoices.filter(i => i.status === 'paid').length === 0 ? (
+                    <div className="text-center py-20">
+                      <FaCheckDouble className="text-gray-700 text-5xl mx-auto mb-3" />
+                      <p className="text-gray-500">No completed invoices yet.</p>
+                    </div>
+                  ) : allInvoices.filter(i => i.status === 'paid').map(inv => (
+                    <div key={inv._id} className="bg-[#111] border border-green-600/20 rounded-2xl p-5">
+                      <div className="flex items-center justify-between gap-4 flex-wrap">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-mono font-bold text-red-400">{inv.invoiceNumber}</span>
+                            <span className="text-xs bg-green-500/20 text-green-400 border border-green-500/30 px-2 py-0.5 rounded">Payment Completed</span>
+                          </div>
+                          <p className="text-white font-semibold">{inv.companyName}</p>
+                          <div className="flex gap-4 mt-1 text-xs text-gray-500">
+                            <span>Issued: {inv.issueDate}</span>
+                            <span>Paid: {inv.paidAt ? new Date(inv.paidAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</span>
+                            <span>Paid by: <span className="text-gray-300">{inv.recipientName || '—'}</span></span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xl font-black text-green-400">${(inv.grandTotal || 0).toFixed(2)}</p>
+                        </div>
+                      </div>
+                      <div className="border-t border-gray-800 mt-4 pt-4 flex gap-2">
+                        <button onClick={() => setViewingInvoice(inv)}
+                          className="flex items-center gap-1.5 text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition">
+                          <FaEyeView className="text-xs" /> View Invoice
+                        </button>
+                        <button onClick={() => downloadInvoicePDF(inv, xtremeBlackLogo)}
+                          className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg transition">
+                          <FaDownload className="text-xs" /> Download PDF
+                        </button>
+                        <button onClick={() => deleteInvoice(inv._id)}
+                          className="flex items-center gap-1.5 text-xs bg-red-600/80 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg transition ml-auto">
+                          <FaTrash className="text-xs" /> Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
         </main>
       </div>
+
+      {/* ── Invoice View Modal ── */}
+      {viewingInvoice && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 overflow-y-auto"
+          style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}
+          onClick={e => { if (e.target === e.currentTarget) setViewingInvoice(null); }}>
+          <div className="w-full max-w-3xl my-8">
+            {/* Modal Actions */}
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-white font-bold text-lg">{viewingInvoice.invoiceNumber}</p>
+              <div className="flex gap-2">
+                <button onClick={() => downloadInvoicePDF(viewingInvoice, xtremeBlackLogo)}
+                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-lg transition text-sm">
+                  <FaDownload /> Download PDF
+                </button>
+                <button onClick={() => setViewingInvoice(null)}
+                  className="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition text-sm">
+                  Close
+                </button>
+              </div>
+            </div>
+            {/* Invoice Preview */}
+            <InvoicePreview
+              form={{
+                invoiceNumber: viewingInvoice.invoiceNumber,
+                companyName:   viewingInvoice.companyName,
+                issueDate:     viewingInvoice.issueDate,
+                dueDate:       viewingInvoice.dueDate,
+                driverName:    viewingInvoice.driverName,
+                clientName:    viewingInvoice.clientName,
+                clientPhone:   viewingInvoice.clientPhone,
+                clientAddress: viewingInvoice.clientAddress,
+                vehicleInfo:   viewingInvoice.vehicleInfo,
+              }}
+              items={viewingInvoice.items || []}
+              tax={viewingInvoice.tax || 0}
+              taxPercent={viewingInvoice.taxPercent || 0}
+              logo={xtremeBlackLogo}
+            />
+          </div>
+        </div>
+      )}
 
       {/* ── Service Request Detail Modal ── */}
       {reqDetail && (

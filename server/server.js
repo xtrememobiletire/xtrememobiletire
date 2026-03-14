@@ -20,6 +20,7 @@ app.use('/api/stripe', require('./routes/stripe'));
 app.use('/api/service-requests', require('./routes/serviceRequests'));
 app.use('/api/vehicles', require('./routes/vehicles'));
 app.use('/api/drivers', require('./routes/drivers'));
+app.use('/api/invoices', require('./routes/invoices'));
 
 // Health check
 app.get('/', (req, res) => res.json({ message: 'XMT Backend Running' }));
