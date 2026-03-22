@@ -52,7 +52,7 @@ export const downloadInvoicePDF = async (inv, logoUrl) => {
     </tr>`).join('');
 
   const logoImg = logoDataUrl
-    ? `<img src="${logoDataUrl}" alt="Xtreme Mobile Tire" style="height:60px;width:auto;object-fit:contain;" />`
+    ? `<img src="${logoDataUrl}" alt="Xtreme Mobile Tire" style="height:110px;width:auto;object-fit:contain;" />`
     : `<div style="font-size:22px;font-weight:900;color:#dc2626;letter-spacing:-1px;">XTREME<span style="color:#111;font-size:14px;font-weight:700;"> Mobile Tire</span></div>`;
 
   const paidBadge = inv.status === 'paid'
@@ -212,7 +212,7 @@ export const downloadInvoicePDF = async (inv, logoUrl) => {
   <div class="footer-terms">
     <p class="ft-title">Terms and Conditions</p>
     <p>Please Send payment via E-transfer or bank Transfer to:
-      <a href="mailto:Payments@Calltire.com">Payments@Calltire.com</a>
+      <a href="mailto:Payments@xtrememobiletire.com">Payments@xtrememobiletire.com</a>
     </p>
   </div>
   <div class="footer-code">

@@ -57,6 +57,11 @@ mongoose
   .connect(process.env.MONGO_URI)
   .then(async () => {
     console.log('MongoDB Atlas connected');
+    // Drop the old single-field unique index on CustomStatus.label if it exists
+    try {
+      await mongoose.connection.collection('customstatuses').dropIndex('label_1');
+      console.log('Dropped old CustomStatus label_1 index');
+    } catch { /* index may not exist, ignore */ }
     await backfillIds();
     const PORT = process.env.PORT || 5000;
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

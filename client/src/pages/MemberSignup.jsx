@@ -11,7 +11,7 @@ const labelCls = 'block text-gray-400 text-xs font-medium mb-1.5 uppercase track
 
 const MemberSignup = () => {
   const [form, setForm] = useState({
-    name: '', email: '', phone: '', website: '', password: '', confirmPassword: '',
+    name: '', email: '', phone: '', website: '', commercialVehicles: '', password: '', confirmPassword: '',
   });
   const [show, setShow] = useState({ password: false, confirmPassword: false });
   const [status, setStatus] = useState({ loading: false, success: '', error: '' });
@@ -97,6 +97,11 @@ const MemberSignup = () => {
                   <input name="website" value={form.website} onChange={handle}
                     placeholder="https://yoursite.com" className={inputCls} />
                 </div>
+              </div>
+              <div>
+                <label className={labelCls}>Commercial Vehicles <span className="text-gray-600 normal-case tracking-normal">(optional)</span></label>
+                <input name="commercialVehicles" value={form.commercialVehicles} onChange={handle}
+                  placeholder="e.g. 3 box trucks, 2 cargo vans" className={inputCls} />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>

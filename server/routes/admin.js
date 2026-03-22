@@ -129,14 +129,14 @@ router.delete('/service-requests/:id', adminAuth, async (req, res) => {
   res.json({ message: 'Service request deleted' });
 });
 
-// ── Custom Statuses ──
+// ── Custom Statuses (Service Requests) ──
 router.get('/custom-statuses', adminAuth, async (req, res) => {
-  let statuses = await CustomStatus.find().sort({ createdAt: 1 });
+  let statuses = await CustomStatus.find({ type: 'service_request' }).sort({ createdAt: 1 });
   // Seed defaults on first use
   if (statuses.length === 0) {
     const defaults = ['Appointment Pending', 'Job Start', 'Appointment Confirmed', 'Appointment Booked'];
-    await CustomStatus.insertMany(defaults.map(label => ({ label })));
-    statuses = await CustomStatus.find().sort({ createdAt: 1 });
+    await CustomStatus.insertMany(defaults.map(label => ({ label, type: 'service_request' })));
+    statuses = await CustomStatus.find({ type: 'service_request' }).sort({ createdAt: 1 });
   }
   res.json(statuses);
 });
@@ -144,9 +144,9 @@ router.get('/custom-statuses', adminAuth, async (req, res) => {
 router.post('/custom-statuses', adminAuth, async (req, res) => {
   const { label } = req.body;
   if (!label) return res.status(400).json({ message: 'Label required.' });
-  const existing = await CustomStatus.findOne({ label });
+  const existing = await CustomStatus.findOne({ label, type: 'service_request' });
   if (existing) return res.status(400).json({ message: 'Status already exists.' });
-  const status = new CustomStatus({ label });
+  const status = new CustomStatus({ label, type: 'service_request' });
   await status.save();
   res.status(201).json(status);
 });
@@ -154,6 +154,27 @@ router.post('/custom-statuses', adminAuth, async (req, res) => {
 router.delete('/custom-statuses/:id', adminAuth, async (req, res) => {
   await CustomStatus.findByIdAndDelete(req.params.id);
   res.json({ message: 'Custom status deleted' });
+});
+
+// ── Invoice Custom Statuses (separate from service request statuses) ──
+router.get('/invoice-statuses', adminAuth, async (req, res) => {
+  const statuses = await CustomStatus.find({ type: 'invoice' }).sort({ createdAt: 1 });
+  res.json(statuses);
+});
+
+router.post('/invoice-statuses', adminAuth, async (req, res) => {
+  const { label } = req.body;
+  if (!label) return res.status(400).json({ message: 'Label required.' });
+  const existing = await CustomStatus.findOne({ label, type: 'invoice' });
+  if (existing) return res.status(400).json({ message: 'Status already exists.' });
+  const status = new CustomStatus({ label, type: 'invoice' });
+  await status.save();
+  res.status(201).json(status);
+});
+
+router.delete('/invoice-statuses/:id', adminAuth, async (req, res) => {
+  await CustomStatus.findByIdAndDelete(req.params.id);
+  res.json({ message: 'Invoice status deleted' });
 });
 
 // ── Dashboard stats ──

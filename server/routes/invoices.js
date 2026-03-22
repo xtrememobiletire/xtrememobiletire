@@ -131,10 +131,10 @@ router.post('/:id/create-payment', async (req, res) => {
     const amountInCents  = Math.round(invoice.grandTotal * 100);
 
     const paymentIntent = await stripeClient.paymentIntents.create({
-      amount:      amountInCents,
-      currency:    'usd',
-      description: `Invoice ${invoice.invoiceNumber} — ${invoice.companyName}`,
-      automatic_payment_methods: { enabled: true },
+      amount:              amountInCents,
+      currency:            'usd',
+      description:         `Invoice ${invoice.invoiceNumber} — ${invoice.companyName}`,
+      payment_method_types: ['card'],
     });
 
     res.json({ clientSecret: paymentIntent.client_secret, amount: invoice.grandTotal });
@@ -143,18 +143,81 @@ router.post('/:id/create-payment', async (req, res) => {
   }
 });
 
-// POST /api/invoices/:id/confirm-payment  — mark invoice as paid after Stripe success
+// POST /api/invoices/:id/confirm-payment  — record Stripe payment (invoice stays pending)
 router.post('/:id/confirm-payment', async (req, res) => {
   try {
     const decoded = authUser(req);
     const { paymentIntentId } = req.body;
-
     const invoice = await Invoice.findOneAndUpdate(
       { _id: req.params.id, recipientId: decoded.id, status: 'pending' },
-      { status: 'paid', stripePaymentIntentId: paymentIntentId || '', paidAt: new Date() },
+      { stripePaymentIntentId: paymentIntentId || '', paymentMethod: 'card' },
       { new: true }
     );
-    if (!invoice) return res.status(404).json({ message: 'Invoice not found or already paid.' });
+    if (!invoice) return res.status(404).json({ message: 'Invoice not found.' });
+    res.json(invoice);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// POST /api/invoices/:id/record-payment  — record non-Stripe payment method (COD / E-Transfer)
+router.post('/:id/record-payment', async (req, res) => {
+  try {
+    const decoded = authUser(req);
+    const { paymentMethod } = req.body;
+    const invoice = await Invoice.findOneAndUpdate(
+      { _id: req.params.id, recipientId: decoded.id, status: 'pending' },
+      { paymentMethod: paymentMethod || '' },
+      { new: true }
+    );
+    if (!invoice) return res.status(404).json({ message: 'Invoice not found.' });
+    res.json(invoice);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// POST /api/invoices/:id/move-to-paid  — user manually moves invoice to paid
+router.post('/:id/move-to-paid', async (req, res) => {
+  try {
+    const decoded = authUser(req);
+    const invoice = await Invoice.findOneAndUpdate(
+      { _id: req.params.id, recipientId: decoded.id, status: 'pending' },
+      { status: 'paid', paidAt: new Date() },
+      { new: true }
+    );
+    if (!invoice) return res.status(404).json({ message: 'Invoice not found.' });
+    res.json(invoice);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// POST /api/invoices/admin/:id/move-to-paid  — admin moves invoice to paid
+router.post('/admin/:id/move-to-paid', adminAuth, async (req, res) => {
+  try {
+    const invoice = await Invoice.findByIdAndUpdate(
+      req.params.id,
+      { status: 'paid', paidAt: new Date() },
+      { new: true }
+    );
+    if (!invoice) return res.status(404).json({ message: 'Invoice not found.' });
+    res.json(invoice);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// PATCH /api/invoices/admin/:id/custom-status  — admin sets custom status label on invoice
+router.patch('/admin/:id/custom-status', adminAuth, async (req, res) => {
+  try {
+    const { customStatus } = req.body;
+    const invoice = await Invoice.findByIdAndUpdate(
+      req.params.id,
+      { customStatus: customStatus || '' },
+      { new: true }
+    );
+    if (!invoice) return res.status(404).json({ message: 'Invoice not found.' });
     res.json(invoice);
   } catch (err) {
     res.status(500).json({ message: err.message });

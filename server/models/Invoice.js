@@ -34,7 +34,9 @@ const InvoiceSchema = new mongoose.Schema({
   // Payment
   status:                 { type: String, enum: ['draft', 'pending', 'paid'], default: 'draft' },
   stripePaymentIntentId:  { type: String, default: '' },
+  paymentMethod:          { type: String, default: '' },  // 'card' | 'cod' | 'etransfer'
   paidAt:                 { type: Date, default: null },
+  customStatus:           { type: String, default: '' },  // admin-assigned status label
 }, { timestamps: true });
 
 module.exports = mongoose.model('Invoice', InvoiceSchema);

@@ -7,8 +7,9 @@ const MemberSchema = new mongoose.Schema({
   email:    { type: String, required: true, unique: true, lowercase: true },
   phone:    { type: String, required: true },
   website:  { type: String, default: '' },
-  vehicle:  { type: String, default: '' },
-  tireSize: { type: String, default: '' },
+  vehicle:           { type: String, default: '' },
+  tireSize:          { type: String, default: '' },
+  commercialVehicles:{ type: String, default: '' },
   password: { type: String, default: '' },
   status:   { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
 }, { timestamps: true });

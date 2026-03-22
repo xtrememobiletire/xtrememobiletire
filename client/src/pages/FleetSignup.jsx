@@ -12,7 +12,7 @@ const labelCls = 'block text-gray-400 text-xs font-medium mb-1.5 uppercase track
 const FleetSignup = () => {
   const [form, setForm] = useState({
     companyName: '', companyWebsite: '', companyEmail: '',
-    phone: '', address: '', password: '', confirmPassword: '',
+    phone: '', address: '', numberOfVehicles: '', password: '', confirmPassword: '',
   });
   const [show, setShow] = useState({ password: false, confirmPassword: false });
   const [status, setStatus] = useState({ loading: false, success: '', error: '' });
@@ -24,7 +24,8 @@ const FleetSignup = () => {
       return setStatus({ loading: false, success: '', error: 'Passwords do not match.' });
     setStatus({ loading: true, success: '', error: '' });
     try {
-      const { confirmPassword, ...payload } = form;
+      const { confirmPassword, numberOfVehicles, ...rest } = form;
+      const payload = { ...rest, vehicles: numberOfVehicles ? parseInt(numberOfVehicles) : 0 };
       const res = await API.post('/fleet/register', payload);
       setStatus({ loading: false, success: res.data.message, error: '' });
     } catch (err) {
@@ -99,10 +100,17 @@ const FleetSignup = () => {
                     placeholder="+1 (000) 000-0000" required className={inputCls} />
                 </div>
               </div>
-              <div>
-                <label className={labelCls}>Company Address *</label>
-                <input name="address" value={form.address} onChange={handle}
-                  placeholder="123 Main St, City, Province/State" required className={inputCls} />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div className="sm:col-span-1">
+                  <label className={labelCls}>Company Address *</label>
+                  <input name="address" value={form.address} onChange={handle}
+                    placeholder="123 Main St, City, Province/State" required className={inputCls} />
+                </div>
+                <div>
+                  <label className={labelCls}>Number of Vehicles *</label>
+                  <input name="numberOfVehicles" type="number" min="1" value={form.numberOfVehicles} onChange={handle}
+                    placeholder="e.g. 10" required className={inputCls} />
+                </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>

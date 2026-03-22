@@ -119,6 +119,8 @@ const FleetDashboard = () => {
   const [payStep,         setPayStep]         = useState('info'); // 'info' | 'stripe' | 'success'
   const [payLoading,      setPayLoading]      = useState(false);
   const [payError,        setPayError]        = useState('');
+  const [payMethod,          setPayMethod]          = useState('card'); // 'card' | 'cod' | 'etransfer'
+  const [invoiceSearch,      setInvoiceSearch]      = useState('');
 
   useEffect(() => {
     const token = localStorage.getItem('xmt_token');
@@ -207,7 +209,7 @@ const FleetDashboard = () => {
 
   // ── Invoice handlers ──
   useEffect(() => {
-    if (tab !== 'pending-invoices' && tab !== 'completed-invoices') return;
+    if (tab !== 'pending-invoices' && tab !== 'paid-invoices') return;
     setInvoicesLoading(true);
     API.get('/invoices/mine')
       .then(res => setMyInvoices(res.data))
@@ -240,11 +242,37 @@ const FleetDashboard = () => {
 
   const handlePaymentSuccess = () => {
     setPayStep('success');
-    setMyInvoices(prev => prev.map(i => i._id === payingInvoice._id ? { ...i, status: 'paid' } : i));
+    // Invoice stays in pending — admin confirms payment manually
+  };
+
+  const handleRecordPayment = async (method) => {
+    setPayLoading(true); setPayError('');
+    try {
+      await API.post(`/invoices/${payingInvoice._id}/record-payment`, { paymentMethod: method });
+      setPayStep('success');
+    } catch (err) {
+      setPayError(err.response?.data?.message || 'Failed to record payment.');
+    } finally {
+      setPayLoading(false);
+    }
+  };
+
+  const handleConfirmPayment = () => {
+    if (payMethod === 'card') handleInitStripe();
+    else handleRecordPayment(payMethod);
+  };
+
+  const handleMoveToPaid = async (invoiceId) => {
+    try {
+      await API.post(`/invoices/${invoiceId}/move-to-paid`);
+      setMyInvoices(prev => prev.map(i => i._id === invoiceId ? { ...i, status: 'paid' } : i));
+    } catch {
+      // silent
+    }
   };
 
   const closePayModal = () => {
-    setPayingInvoice(null); setClientSecret(''); setPayStep('info'); setPayError('');
+    setPayingInvoice(null); setClientSecret(''); setPayStep('info'); setPayError(''); setPayMethod('card');
   };
 
   const handleAddDriver = async (e) => {
@@ -331,7 +359,7 @@ const FleetDashboard = () => {
     { key: 'request',             label: 'Request New Service',  icon: <FaCalendarPlus /> },
     { key: 'services',            label: 'Service Status',       icon: <FaListAlt /> },
     { key: 'pending-invoices',    label: 'Pending Invoices',     icon: <FaFileInvoiceDollar /> },
-    { key: 'completed-invoices',  label: 'Completed Invoices',   icon: <FaCheckDouble /> },
+    { key: 'paid-invoices',        label: 'Paid Invoices',         icon: <FaCheckDouble /> },
   ];
 
   return (
@@ -947,25 +975,42 @@ const FleetDashboard = () => {
               <h2 className="text-2xl font-bold mb-1 flex items-center gap-2">
                 <FaFileInvoiceDollar className="text-red-500" /> Pending Invoices
               </h2>
-              <p className="text-gray-400 text-sm mb-6">Invoices sent to you by XtremeMobileTire that require payment.</p>
+              <p className="text-gray-400 text-sm mb-4">Invoices sent to you by XtremeMobileTire that require payment.</p>
+              <input
+                value={invoiceSearch}
+                onChange={e => setInvoiceSearch(e.target.value)}
+                placeholder="Search invoice #, company…"
+                className="w-full bg-[#111] border border-gray-700 focus:border-red-600 text-white placeholder-gray-600 px-4 py-2.5 rounded-xl text-sm outline-none transition mb-5"
+              />
               {invoicesLoading ? (
                 <div className="flex items-center justify-center py-20">
                   <div className="w-8 h-8 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
                 </div>
-              ) : myInvoices.filter(i => i.status === 'pending').length === 0 ? (
+              ) : myInvoices.filter(i => {
+                if (i.status !== 'pending') return false;
+                const q = invoiceSearch.toLowerCase();
+                return !q || [i.invoiceNumber, i.companyName, i.clientName].some(f => (f||'').toLowerCase().includes(q));
+              }).length === 0 ? (
                 <div className="text-center py-20">
                   <FaFileInvoiceDollar className="text-gray-700 text-5xl mx-auto mb-3" />
-                  <p className="text-gray-500">No pending invoices at this time.</p>
+                  <p className="text-gray-500">{invoiceSearch ? 'No matching invoices.' : 'No pending invoices at this time.'}</p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {myInvoices.filter(i => i.status === 'pending').map(inv => (
+                  {myInvoices.filter(i => {
+                    if (i.status !== 'pending') return false;
+                    const q = invoiceSearch.toLowerCase();
+                    return !q || [i.invoiceNumber, i.companyName, i.clientName].some(f => (f||'').toLowerCase().includes(q));
+                  }).map(inv => (
                     <div key={inv._id} className="bg-[#111] border border-yellow-600/30 rounded-2xl p-5">
                       <div className="flex items-start justify-between gap-4 flex-wrap">
                         <div>
-                          <div className="flex items-center gap-2 mb-1">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <span className="font-mono font-bold text-red-400">{inv.invoiceNumber}</span>
                             <span className="text-xs bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-2 py-0.5 rounded">Payment Pending</span>
+                            {inv.customStatus && (
+                              <span className="text-xs bg-purple-500/20 text-purple-400 border border-purple-500/30 px-2 py-0.5 rounded">{inv.customStatus}</span>
+                            )}
                           </div>
                           <p className="text-white font-semibold">{inv.companyName}</p>
                           {inv.clientName && <p className="text-gray-400 text-sm">{inv.clientName}{inv.vehicleInfo ? ` — ${inv.vehicleInfo}` : ''}</p>}
@@ -980,9 +1025,6 @@ const FleetDashboard = () => {
                         </div>
                       </div>
                       <div className="border-t border-gray-800 mt-4 pt-4">
-                        <p className="text-sm text-gray-400 mb-3">
-                          💳 Payment can be given through <span className="text-white font-medium">bank transfer</span> or online via Stripe below.
-                        </p>
                         <div className="flex gap-2 flex-wrap">
                           <button onClick={() => handlePayNow(inv)}
                             className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-5 py-2.5 rounded-lg transition text-sm">
@@ -1001,31 +1043,45 @@ const FleetDashboard = () => {
             </div>
           )}
 
-          {/* ── Completed Invoices Tab ── */}
-          {tab === 'completed-invoices' && (
+          {/* ── Paid Invoices Tab ── */}
+          {tab === 'paid-invoices' && (
             <div>
               <h2 className="text-2xl font-bold mb-1 flex items-center gap-2">
-                <FaCheckDouble className="text-green-500" /> Completed Invoices
+                <FaCheckDouble className="text-green-500" /> Paid Invoices
               </h2>
-              <p className="text-gray-400 text-sm mb-6">Invoices you have already paid.</p>
+              <p className="text-gray-400 text-sm mb-4">Invoices that have been marked as paid.</p>
+              <input
+                value={invoiceSearch}
+                onChange={e => setInvoiceSearch(e.target.value)}
+                placeholder="Search invoice #, company…"
+                className="w-full bg-[#111] border border-gray-700 focus:border-red-600 text-white placeholder-gray-600 px-4 py-2.5 rounded-xl text-sm outline-none transition mb-5"
+              />
               {invoicesLoading ? (
                 <div className="flex items-center justify-center py-20">
                   <div className="w-8 h-8 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
                 </div>
-              ) : myInvoices.filter(i => i.status === 'paid').length === 0 ? (
+              ) : myInvoices.filter(i => {
+                if (i.status !== 'paid') return false;
+                const q = invoiceSearch.toLowerCase();
+                return !q || [i.invoiceNumber, i.companyName, i.clientName].some(f => (f||'').toLowerCase().includes(q));
+              }).length === 0 ? (
                 <div className="text-center py-20">
                   <FaCheckDouble className="text-gray-700 text-5xl mx-auto mb-3" />
-                  <p className="text-gray-500">No completed invoices yet.</p>
+                  <p className="text-gray-500">{invoiceSearch ? 'No matching invoices.' : 'No paid invoices yet.'}</p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {myInvoices.filter(i => i.status === 'paid').map(inv => (
+                  {myInvoices.filter(i => {
+                    if (i.status !== 'paid') return false;
+                    const q = invoiceSearch.toLowerCase();
+                    return !q || [i.invoiceNumber, i.companyName, i.clientName].some(f => (f||'').toLowerCase().includes(q));
+                  }).map(inv => (
                     <div key={inv._id} className="bg-[#111] border border-green-600/20 rounded-2xl p-5">
                       <div className="flex items-center justify-between gap-4 flex-wrap">
                         <div>
                           <div className="flex items-center gap-2 mb-1">
                             <span className="font-mono font-bold text-red-400">{inv.invoiceNumber}</span>
-                            <span className="text-xs bg-green-500/20 text-green-400 border border-green-500/30 px-2 py-0.5 rounded">Payment Completed</span>
+                            <span className="text-xs bg-green-500/20 text-green-400 border border-green-500/30 px-2 py-0.5 rounded">Paid</span>
                           </div>
                           <p className="text-white font-semibold">{inv.companyName}</p>
                           <div className="flex gap-4 mt-1 text-xs text-gray-500">
@@ -1091,13 +1147,30 @@ const FleetDashboard = () => {
                       <span className="text-green-400 font-black text-lg">${(payingInvoice.grandTotal || 0).toFixed(2)}</span>
                     </div>
                   </div>
-                  <p className="text-sm text-gray-400 mb-5">
-                    💳 You can pay this invoice through <strong className="text-white">bank transfer</strong> or click below to pay securely via Stripe.
-                  </p>
+                  <p className="text-xs text-gray-500 uppercase tracking-widest mb-3">Select Payment Method</p>
+                  <div className="space-y-2 mb-5">
+                    {[
+                      { key: 'card',      label: 'Card / POS',       desc: 'Pay securely with your card',        icon: '💳' },
+                      { key: 'cod',       label: 'Cash on Delivery', desc: 'Pay in cash upon service',           icon: '💵' },
+                      { key: 'etransfer', label: 'E-Transfer',       desc: 'Pay via email money transfer',       icon: '📱' },
+                    ].map(({ key, label, desc, icon }) => (
+                      <button key={key} onClick={() => setPayMethod(key)}
+                        className={`w-full flex items-center gap-3 p-3 rounded-xl border transition ${
+                          payMethod === key ? 'border-red-500 bg-red-600/10' : 'border-gray-700 bg-black/40 hover:border-gray-500'
+                        }`}>
+                        <span className="text-xl">{icon}</span>
+                        <div className="text-left flex-1">
+                          <p className="text-white font-medium text-sm">{label}</p>
+                          <p className="text-gray-500 text-xs">{desc}</p>
+                        </div>
+                        {payMethod === key && <span className="text-red-500 font-bold">✓</span>}
+                      </button>
+                    ))}
+                  </div>
                   {payError && <p className="text-red-400 text-sm mb-3 bg-red-900/20 border border-red-600/20 rounded-lg p-3">{payError}</p>}
-                  <button onClick={handleInitStripe} disabled={payLoading}
+                  <button onClick={handleConfirmPayment} disabled={payLoading}
                     className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white font-bold py-3 rounded-xl transition">
-                    {payLoading ? 'Loading…' : `Pay via Stripe — $${(payingInvoice.grandTotal || 0).toFixed(2)}`}
+                    {payLoading ? 'Loading…' : `Confirm — $${(payingInvoice.grandTotal || 0).toFixed(2)}`}
                   </button>
                 </div>
               )}
@@ -1123,11 +1196,11 @@ const FleetDashboard = () => {
               {payStep === 'success' && (
                 <div className="text-center py-6">
                   <div className="text-5xl mb-4">✅</div>
-                  <h3 className="text-xl font-bold text-green-400 mb-2">Payment Successful!</h3>
-                  <p className="text-gray-400 text-sm mb-6">Invoice {payingInvoice.invoiceNumber} has been paid. It will now appear in your Completed Invoices.</p>
-                  <button onClick={() => { closePayModal(); setTab('completed-invoices'); }}
+                  <h3 className="text-xl font-bold text-green-400 mb-2">Payment Recorded!</h3>
+                  <p className="text-gray-400 text-sm mb-6">Your payment has been recorded. Invoice {payingInvoice.invoiceNumber} remains in Pending Invoices until confirmed.</p>
+                  <button onClick={closePayModal}
                     className="bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-2.5 rounded-xl transition">
-                    View Completed Invoices
+                    Back to Pending Invoices
                   </button>
                 </div>
               )}

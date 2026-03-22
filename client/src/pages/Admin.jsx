@@ -44,7 +44,7 @@ const InvoicePreview = ({ form, items, tax, taxPercent, logo }) => {
           <p className="text-sm text-gray-500 mt-1">Invoice No # {form.invoiceNumber || '—'}</p>
         </div>
         <div>
-          <img src={logo} alt="Xtreme Mobile Tire" className="h-16 w-auto object-contain" />
+          <img src={logo} alt="Xtreme Mobile Tire" className="h-28 w-auto object-contain" />
         </div>
       </div>
 
@@ -143,7 +143,7 @@ const InvoicePreview = ({ form, items, tax, taxPercent, logo }) => {
         <p className="text-xs font-bold text-gray-900 mb-1">Terms and Conditions</p>
         <p className="text-xs text-gray-500">
           Please Send payment via E-transfer or bank Transfer to:{' '}
-          <span className="text-blue-600">Payments@Calltire.com</span>
+          <span className="text-blue-600">Payments@xtrememobiletire.com</span>
         </p>
       </div>
       <div className="mx-8 border-t border-gray-100 py-3 text-center">
@@ -229,6 +229,15 @@ export default function Admin() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // Search / filter state
+  const [bookingSearch,  setBookingSearch]  = useState('');
+  const [serviceSearch,  setServiceSearch]  = useState('');
+  const [serviceFilter,  setServiceFilter]  = useState('all'); // 'all' | 'fleet' | 'member'
+  const [invoiceSearch,        setInvoiceSearch]        = useState('');
+  const [pendingInvoiceSearch, setPendingInvoiceSearch] = useState('');
+  const [paidInvoiceSearch,    setPaidInvoiceSearch]    = useState('');
+  const [vehicleSearch,  setVehicleSearch]  = useState('');
+
   // Vehicle modal
   const [vehicleModal,        setVehicleModal]        = useState(null);
   const [vehicleModalData,    setVehicleModalData]    = useState([]);
@@ -237,6 +246,7 @@ export default function Admin() {
   const openVehicleModal = async (name, userId) => {
     setVehicleModal({ name, userId });
     setVehicleModalData([]);
+    setVehicleSearch('');
     setVehicleModalLoading(true);
     try {
       const res = await API.get(`/admin/vehicles/${userId}`);
@@ -264,11 +274,17 @@ export default function Admin() {
   // Service request detail modal
   const [reqDetail, setReqDetail] = useState(null);
 
-  // Status management
+  // Status management (service requests)
   const [allStatuses,    setAllStatuses]    = useState([]);
   const [showStatusModal,setShowStatusModal]= useState(false);
   const [newStatusLabel, setNewStatusLabel] = useState('');
   const [statusAdding,   setStatusAdding]   = useState(false);
+
+  // Invoice status management (separate from service request statuses)
+  const [allInvoiceStatuses,     setAllInvoiceStatuses]     = useState([]);
+  const [showInvoiceStatusModal, setShowInvoiceStatusModal] = useState(false);
+  const [newInvoiceStatusLabel,  setNewInvoiceStatusLabel]  = useState('');
+  const [invoiceStatusAdding,    setInvoiceStatusAdding]    = useState(false);
 
   // ── Invoice state ──
   const [invoiceView,    setInvoiceView]    = useState('list');   // 'list' | 'create'
@@ -291,6 +307,9 @@ export default function Admin() {
 
   const loadStatuses = () =>
     API.get('/admin/custom-statuses').then(r => setAllStatuses(r.data)).catch(() => {});
+
+  const loadInvoiceStatuses = () =>
+    API.get('/admin/invoice-statuses').then(r => setAllInvoiceStatuses(r.data)).catch(() => {});
 
   // ── Invoice helpers ──
   const loadAllInvoices = async () => {
@@ -382,11 +401,32 @@ export default function Admin() {
     setAllInvoices(prev => prev.filter(inv => inv._id !== id));
   };
 
+  const handleAdminMoveToPaid = async (invoiceId) => {
+    if (!confirm('Move this invoice to Paid Invoices?')) return;
+    try {
+      await API.post(`/invoices/admin/${invoiceId}/move-to-paid`);
+      setAllInvoices(prev => prev.map(i => i._id === invoiceId ? { ...i, status: 'paid', paidAt: new Date() } : i));
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to move invoice.');
+    }
+  };
+
+  const handleInvoiceCustomStatus = async (invoiceId, statusLabel) => {
+    try {
+      await API.patch(`/invoices/admin/${invoiceId}/custom-status`, { customStatus: statusLabel });
+      setAllInvoices(prev => prev.map(i => i._id === invoiceId ? { ...i, customStatus: statusLabel } : i));
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update status.');
+    }
+  };
+
   // Load stats + invoice counts when logged in
   useEffect(() => {
     if (!isAdmin) return;
     API.get('/admin/stats').then(r => setStats(r.data)).catch(() => {});
-    loadAllInvoices(); // preload for sidebar badge counts
+    loadAllInvoices();       // preload for sidebar badge counts
+    loadStatuses();          // preload service-request custom statuses
+    loadInvoiceStatuses();   // preload invoice custom statuses
   }, [isAdmin]);
 
   // Load tab data
@@ -424,6 +464,25 @@ export default function Admin() {
   const handleDeleteStatus = async (id) => {
     await API.delete(`/admin/custom-statuses/${id}`);
     setAllStatuses(prev => prev.filter(s => s._id !== id));
+  };
+
+  const handleAddInvoiceStatus = async () => {
+    if (!newInvoiceStatusLabel.trim()) return;
+    setInvoiceStatusAdding(true);
+    try {
+      const res = await API.post('/admin/invoice-statuses', { label: newInvoiceStatusLabel.trim() });
+      setAllInvoiceStatuses(prev => [...prev, res.data]);
+      setNewInvoiceStatusLabel('');
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to add status.');
+    } finally {
+      setInvoiceStatusAdding(false);
+    }
+  };
+
+  const handleDeleteInvoiceStatus = async (id) => {
+    await API.delete(`/admin/invoice-statuses/${id}`);
+    setAllInvoiceStatuses(prev => prev.filter(s => s._id !== id));
   };
 
   const updateStatus = async (id, status) => {
@@ -468,7 +527,7 @@ export default function Admin() {
     { key: 'service-requests', label: 'Services' },
     { key: 'invoices',         label: 'Invoices' },
     { key: 'admin-pending',    label: 'Pending Invoices' },
-    { key: 'admin-completed',  label: 'Completed Invoices' },
+    { key: 'admin-completed',  label: 'Paid Invoices' },
   ];
 
   return (
@@ -558,7 +617,15 @@ export default function Admin() {
           {/* Bookings */}
           {tab === 'bookings' && (
             <div>
-              <h2 className="text-2xl font-bold mb-6">Bookings ({data.length})</h2>
+              <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+                <h2 className="text-2xl font-bold">Bookings ({data.length})</h2>
+                <input
+                  value={bookingSearch}
+                  onChange={e => setBookingSearch(e.target.value)}
+                  placeholder="Search by name, email, service…"
+                  className="bg-[#111] border border-gray-700 focus:border-red-600 text-white placeholder-gray-600 px-4 py-2 rounded-lg text-sm outline-none transition w-72"
+                />
+              </div>
               {loading ? <p className="text-gray-500">Loading...</p> : (
                 <div className="bg-[#111] border border-gray-800 rounded-xl overflow-x-auto">
                   <table className="w-full min-w-[700px]">
@@ -570,7 +637,10 @@ export default function Admin() {
                       </tr>
                     </thead>
                     <tbody>
-                      {data.map(b => (
+                      {data.filter(b => {
+                        const q = bookingSearch.toLowerCase();
+                        return !q || [b.fullName, b.email, b.phone, b.service].some(f => (f||'').toLowerCase().includes(q));
+                      }).map(b => (
                         <tr key={b._id} className="hover:bg-white/2">
                           <td className={tdCls}>{b.fullName}</td>
                           <td className={tdCls}>{b.email}</td>
@@ -593,7 +663,9 @@ export default function Admin() {
                           </td>
                         </tr>
                       ))}
-                      {!data.length && <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-600">No bookings yet.</td></tr>}
+                      {!data.filter(b => { const q = bookingSearch.toLowerCase(); return !q || [b.fullName, b.email, b.phone, b.service].some(f => (f||'').toLowerCase().includes(q)); }).length && (
+                        <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-600">{bookingSearch ? 'No matching bookings.' : 'No bookings yet.'}</td></tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -772,7 +844,7 @@ export default function Admin() {
           {tab === 'service-requests' && (
             <div>
               {/* Header */}
-              <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+              <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
                 <h2 className="text-2xl font-bold">Service Requests ({data.length})</h2>
                 <button
                   onClick={() => { setShowStatusModal(true); setNewStatusLabel(''); }}
@@ -780,6 +852,31 @@ export default function Admin() {
                 >
                   <span className="text-base leading-none">+</span> Custom Status
                 </button>
+              </div>
+
+              {/* Filter + Search bar */}
+              <div className="flex items-center gap-3 mb-5 flex-wrap">
+                {['all', 'fleet', 'member'].map(f => (
+                  <button
+                    key={f}
+                    onClick={() => setServiceFilter(f)}
+                    className={`px-4 py-1.5 rounded-lg text-xs font-semibold capitalize transition border ${
+                      serviceFilter === f
+                        ? f === 'fleet'  ? 'bg-orange-500/20 text-orange-400 border-orange-500/50'
+                        : f === 'member' ? 'bg-blue-500/20 text-blue-400 border-blue-500/50'
+                        :                 'bg-red-600 text-white border-red-600'
+                        : 'bg-transparent text-gray-400 border-gray-700 hover:border-gray-500'
+                    }`}
+                  >
+                    {f === 'all' ? 'All' : f === 'fleet' ? 'Fleet' : 'Membership'}
+                  </button>
+                ))}
+                <input
+                  value={serviceSearch}
+                  onChange={e => setServiceSearch(e.target.value)}
+                  placeholder="Search by name, email, vehicle…"
+                  className="bg-[#111] border border-gray-700 focus:border-red-600 text-white placeholder-gray-600 px-4 py-2 rounded-lg text-sm outline-none transition w-72 ml-auto"
+                />
               </div>
 
               {/* Requests Table */}
@@ -794,7 +891,12 @@ export default function Admin() {
                       </tr>
                     </thead>
                     <tbody>
-                      {data.map(req => (
+                      {data.filter(req => {
+                        const matchType = serviceFilter === 'all' || req.userType === serviceFilter;
+                        const q = serviceSearch.toLowerCase();
+                        const matchSearch = !q || [req.userName, req.userEmail, req.vehicle, req.service, req.phone].some(f => (f||'').toLowerCase().includes(q));
+                        return matchType && matchSearch;
+                      }).map(req => (
                         <tr key={req._id} className="hover:bg-white/5 cursor-pointer" onClick={() => setReqDetail(req)}>
                           <td className={tdCls}>{req.userName}</td>
                           <td className={tdCls}>
@@ -844,8 +946,13 @@ export default function Admin() {
                           </td>
                         </tr>
                       ))}
-                      {!data.length && (
-                        <tr><td colSpan={12} className="px-4 py-8 text-center text-gray-600">No service requests yet.</td></tr>
+                      {!data.filter(req => {
+                        const matchType = serviceFilter === 'all' || req.userType === serviceFilter;
+                        const q = serviceSearch.toLowerCase();
+                        const matchSearch = !q || [req.userName, req.userEmail, req.vehicle, req.service, req.phone].some(f => (f||'').toLowerCase().includes(q));
+                        return matchType && matchSearch;
+                      }).length && (
+                        <tr><td colSpan={12} className="px-4 py-8 text-center text-gray-600">{serviceSearch || serviceFilter !== 'all' ? 'No matching service requests.' : 'No service requests yet.'}</td></tr>
                       )}
                     </tbody>
                   </table>
@@ -920,16 +1027,24 @@ export default function Admin() {
               {invoiceView === 'list' ? (
                 /* All Invoices List */
                 <div>
-                  <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+                  <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
                     <h2 className="text-2xl font-bold flex items-center gap-2">
                       <FaFileInvoiceDollar className="text-red-500" /> Invoices ({allInvoices.length})
                     </h2>
-                    <button
-                      onClick={() => { setInvoiceView('create'); resetInvoiceForm(); }}
-                      className="flex items-center gap-1.5 text-xs bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition font-semibold"
-                    >
-                      <FaPlus /> New Invoice
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <input
+                        value={invoiceSearch}
+                        onChange={e => setInvoiceSearch(e.target.value)}
+                        placeholder="Search invoice #, company, client…"
+                        className="bg-[#111] border border-gray-700 focus:border-red-600 text-white placeholder-gray-600 px-4 py-2 rounded-lg text-sm outline-none transition w-72"
+                      />
+                      <button
+                        onClick={() => { setInvoiceView('create'); resetInvoiceForm(); }}
+                        className="flex items-center gap-1.5 text-xs bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition font-semibold whitespace-nowrap"
+                      >
+                        <FaPlus /> New Invoice
+                      </button>
+                    </div>
                   </div>
 
                   {invoicesLoading ? <p className="text-gray-500">Loading...</p> : (
@@ -937,13 +1052,16 @@ export default function Admin() {
                       <table className="w-full min-w-[900px]">
                         <thead>
                           <tr>
-                            {['Invoice #','Company','Client','Issue Date','Due Date','Grand Total','Status','Sent To','Actions'].map(h => (
+                            {['Invoice #','Company','Client','Issue Date','Due Date','Grand Total','Status','Payment Method','Sent To','Actions'].map(h => (
                               <th key={h} className={thCls}>{h}</th>
                             ))}
                           </tr>
                         </thead>
                         <tbody>
-                          {allInvoices.map(inv => (
+                          {allInvoices.filter(inv => {
+                            const q = invoiceSearch.toLowerCase();
+                            return !q || [inv.invoiceNumber, inv.companyName, inv.clientName, inv.recipientName].some(f => (f||'').toLowerCase().includes(q));
+                          }).map(inv => (
                             <tr key={inv._id} className="hover:bg-white/5 cursor-pointer" onClick={() => setViewingInvoice(inv)}>
                               <td className={tdCls}><span className="font-mono font-bold text-red-400">{inv.invoiceNumber}</span></td>
                               <td className={tdCls}>{inv.companyName}</td>
@@ -956,7 +1074,13 @@ export default function Admin() {
                                   inv.status === 'paid'    ? 'bg-green-500/20 text-green-400 border-green-500/30' :
                                   inv.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' :
                                   'bg-gray-500/20 text-gray-400 border-gray-500/30'
-                                }`}>{inv.status === 'paid' ? 'Payment Completed' : inv.status}</span>
+                                }`}>{inv.status === 'paid' ? 'Paid' : inv.status}</span>
+                              </td>
+                              <td className={tdCls}>
+                                {inv.paymentMethod === 'card'      && <span className="text-xs bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded">💳 Card / POS</span>}
+                                {inv.paymentMethod === 'cod'       && <span className="text-xs bg-green-500/20 text-green-400 border border-green-500/30 px-2 py-0.5 rounded">💵 Cash on Delivery</span>}
+                                {inv.paymentMethod === 'etransfer' && <span className="text-xs bg-purple-500/20 text-purple-400 border border-purple-500/30 px-2 py-0.5 rounded">📱 E-Transfer</span>}
+                                {!inv.paymentMethod               && <span className="text-gray-600 text-xs italic">—</span>}
                               </td>
                               <td className={tdCls}>{inv.recipientName || <span className="text-gray-600 italic">Not sent</span>}</td>
                               <td className={tdCls} onClick={e => e.stopPropagation()}>
@@ -970,8 +1094,11 @@ export default function Admin() {
                               </td>
                             </tr>
                           ))}
-                          {!allInvoices.length && (
-                            <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-600">No invoices yet. Click "New Invoice" to create one.</td></tr>
+                          {!allInvoices.filter(inv => {
+                            const q = invoiceSearch.toLowerCase();
+                            return !q || [inv.invoiceNumber, inv.companyName, inv.clientName, inv.recipientName].some(f => (f||'').toLowerCase().includes(q));
+                          }).length && (
+                            <tr><td colSpan={10} className="px-4 py-8 text-center text-gray-600">{invoiceSearch ? 'No matching invoices.' : 'No invoices yet. Click "New Invoice" to create one.'}</td></tr>
                           )}
                         </tbody>
                       </table>
@@ -1258,24 +1385,49 @@ export default function Admin() {
           {/* ── Admin Pending Invoices Tab ── */}
           {tab === 'admin-pending' && (
             <div>
-              <h2 className="text-2xl font-bold mb-1 flex items-center gap-2">
-                <FaFileInvoiceDollar className="text-yellow-500" /> Pending Invoices ({allInvoices.filter(i => i.status === 'pending').length})
-              </h2>
-              <p className="text-gray-400 text-sm mb-6">Invoices sent to users awaiting payment.</p>
+              <div className="flex items-center justify-between mb-1 flex-wrap gap-3">
+                <h2 className="text-2xl font-bold flex items-center gap-2">
+                  <FaFileInvoiceDollar className="text-yellow-500" /> Pending Invoices ({allInvoices.filter(i => i.status === 'pending').length})
+                </h2>
+                <button
+                  onClick={() => setShowInvoiceStatusModal(true)}
+                  className="flex items-center gap-1.5 text-xs bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition font-semibold"
+                >
+                  <FaPlus className="text-xs" /> Manage Invoice Statuses
+                </button>
+              </div>
+              <p className="text-gray-400 text-sm mb-4">Invoices sent to users awaiting payment.</p>
+              <input
+                value={pendingInvoiceSearch}
+                onChange={e => setPendingInvoiceSearch(e.target.value)}
+                placeholder="Search invoice #, company, client…"
+                className="w-full bg-[#111] border border-gray-700 focus:border-red-600 text-white placeholder-gray-600 px-4 py-2.5 rounded-xl text-sm outline-none transition mb-5"
+              />
               {invoicesLoading ? <p className="text-gray-500">Loading...</p> : (
                 <div className="space-y-4">
-                  {allInvoices.filter(i => i.status === 'pending').length === 0 ? (
+                  {allInvoices.filter(i => {
+                    if (i.status !== 'pending') return false;
+                    const q = pendingInvoiceSearch.toLowerCase();
+                    return !q || [i.invoiceNumber, i.companyName, i.clientName, i.recipientName].some(f => (f||'').toLowerCase().includes(q));
+                  }).length === 0 ? (
                     <div className="text-center py-20">
                       <FaFileInvoiceDollar className="text-gray-700 text-5xl mx-auto mb-3" />
                       <p className="text-gray-500">No pending invoices.</p>
                     </div>
-                  ) : allInvoices.filter(i => i.status === 'pending').map(inv => (
+                  ) : allInvoices.filter(i => {
+                    if (i.status !== 'pending') return false;
+                    const q = pendingInvoiceSearch.toLowerCase();
+                    return !q || [i.invoiceNumber, i.companyName, i.clientName, i.recipientName].some(f => (f||'').toLowerCase().includes(q));
+                  }).map(inv => (
                     <div key={inv._id} className="bg-[#111] border border-yellow-600/30 rounded-2xl p-5">
                       <div className="flex items-start justify-between gap-4 flex-wrap">
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <span className="font-mono font-bold text-red-400">{inv.invoiceNumber}</span>
                             <span className="text-xs bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-2 py-0.5 rounded">Payment Pending</span>
+                            {inv.paymentMethod === 'card'      && <span className="text-xs bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded">💳 Card / POS</span>}
+                            {inv.paymentMethod === 'cod'       && <span className="text-xs bg-green-500/20 text-green-400 border border-green-500/30 px-2 py-0.5 rounded">💵 Cash on Delivery</span>}
+                            {inv.paymentMethod === 'etransfer' && <span className="text-xs bg-purple-500/20 text-purple-400 border border-purple-500/30 px-2 py-0.5 rounded">📱 E-Transfer</span>}
                           </div>
                           <p className="text-white font-semibold">{inv.companyName}</p>
                           {inv.clientName && <p className="text-gray-400 text-sm">{inv.clientName}{inv.vehicleInfo ? ` — ${inv.vehicleInfo}` : ''}</p>}
@@ -1289,7 +1441,7 @@ export default function Admin() {
                           <p className="text-2xl font-black text-green-400">${(inv.grandTotal || 0).toFixed(2)}</p>
                         </div>
                       </div>
-                      <div className="border-t border-gray-800 mt-4 pt-4 flex gap-2">
+                      <div className="border-t border-gray-800 mt-4 pt-4 flex gap-2 flex-wrap items-center">
                         <button onClick={() => setViewingInvoice(inv)}
                           className="flex items-center gap-1.5 text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition">
                           <FaEyeView className="text-xs" /> View Invoice
@@ -1297,6 +1449,21 @@ export default function Admin() {
                         <button onClick={() => downloadInvoicePDF(inv, xtremeBlackLogo)}
                           className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg transition">
                           <FaDownload className="text-xs" /> Download PDF
+                        </button>
+                        {/* Invoice custom status dropdown */}
+                        <select
+                          value={inv.customStatus || ''}
+                          onChange={e => handleInvoiceCustomStatus(inv._id, e.target.value)}
+                          className="bg-[#0a0a0a] border border-purple-700 text-gray-300 text-xs rounded-lg px-2 py-1.5 outline-none focus:border-purple-500 transition cursor-pointer"
+                        >
+                          <option value="">Set Status…</option>
+                          {allInvoiceStatuses.map(s => (
+                            <option key={s._id} value={s.label}>{s.label}</option>
+                          ))}
+                        </select>
+                        <button onClick={() => handleAdminMoveToPaid(inv._id)}
+                          className="flex items-center gap-1.5 text-xs bg-green-700 hover:bg-green-600 text-white px-3 py-1.5 rounded-lg transition">
+                          <FaCheckDouble className="text-xs" /> Move to Paid
                         </button>
                         <button onClick={() => deleteInvoice(inv._id)}
                           className="flex items-center gap-1.5 text-xs bg-red-600/80 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg transition ml-auto">
@@ -1310,27 +1477,44 @@ export default function Admin() {
             </div>
           )}
 
-          {/* ── Admin Completed Invoices Tab ── */}
+          {/* ── Admin Paid Invoices Tab ── */}
           {tab === 'admin-completed' && (
             <div>
               <h2 className="text-2xl font-bold mb-1 flex items-center gap-2">
-                <FaCheckDouble className="text-green-500" /> Completed Invoices ({allInvoices.filter(i => i.status === 'paid').length})
+                <FaCheckDouble className="text-green-500" /> Paid Invoices ({allInvoices.filter(i => i.status === 'paid').length})
               </h2>
-              <p className="text-gray-400 text-sm mb-6">Invoices that have been paid by users.</p>
+              <p className="text-gray-400 text-sm mb-4">Invoices that have been marked as paid.</p>
+              <input
+                value={paidInvoiceSearch}
+                onChange={e => setPaidInvoiceSearch(e.target.value)}
+                placeholder="Search invoice #, company, client…"
+                className="w-full bg-[#111] border border-gray-700 focus:border-red-600 text-white placeholder-gray-600 px-4 py-2.5 rounded-xl text-sm outline-none transition mb-5"
+              />
               {invoicesLoading ? <p className="text-gray-500">Loading...</p> : (
                 <div className="space-y-3">
-                  {allInvoices.filter(i => i.status === 'paid').length === 0 ? (
+                  {allInvoices.filter(i => {
+                    if (i.status !== 'paid') return false;
+                    const q = paidInvoiceSearch.toLowerCase();
+                    return !q || [i.invoiceNumber, i.companyName, i.clientName, i.recipientName].some(f => (f||'').toLowerCase().includes(q));
+                  }).length === 0 ? (
                     <div className="text-center py-20">
                       <FaCheckDouble className="text-gray-700 text-5xl mx-auto mb-3" />
-                      <p className="text-gray-500">No completed invoices yet.</p>
+                      <p className="text-gray-500">{paidInvoiceSearch ? 'No matching invoices.' : 'No paid invoices yet.'}</p>
                     </div>
-                  ) : allInvoices.filter(i => i.status === 'paid').map(inv => (
+                  ) : allInvoices.filter(i => {
+                    if (i.status !== 'paid') return false;
+                    const q = paidInvoiceSearch.toLowerCase();
+                    return !q || [i.invoiceNumber, i.companyName, i.clientName, i.recipientName].some(f => (f||'').toLowerCase().includes(q));
+                  }).map(inv => (
                     <div key={inv._id} className="bg-[#111] border border-green-600/20 rounded-2xl p-5">
                       <div className="flex items-center justify-between gap-4 flex-wrap">
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <span className="font-mono font-bold text-red-400">{inv.invoiceNumber}</span>
-                            <span className="text-xs bg-green-500/20 text-green-400 border border-green-500/30 px-2 py-0.5 rounded">Payment Completed</span>
+                            <span className="text-xs bg-green-500/20 text-green-400 border border-green-500/30 px-2 py-0.5 rounded">Paid</span>
+                            {inv.paymentMethod === 'card'      && <span className="text-xs bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded">💳 Card / POS</span>}
+                            {inv.paymentMethod === 'cod'       && <span className="text-xs bg-green-500/20 text-green-400 border border-green-500/30 px-2 py-0.5 rounded">💵 Cash on Delivery</span>}
+                            {inv.paymentMethod === 'etransfer' && <span className="text-xs bg-purple-500/20 text-purple-400 border border-purple-500/30 px-2 py-0.5 rounded">📱 E-Transfer</span>}
                           </div>
                           <p className="text-white font-semibold">{inv.companyName}</p>
                           <div className="flex gap-4 mt-1 text-xs text-gray-500">
@@ -1366,6 +1550,61 @@ export default function Admin() {
 
         </main>
       </div>
+
+      {/* ── Invoice Status Management Modal ── */}
+      {showInvoiceStatusModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}
+          onClick={e => { if (e.target === e.currentTarget) setShowInvoiceStatusModal(false); }}
+        >
+          <div className="bg-[#111] border border-gray-800 rounded-2xl w-full max-w-md p-6"
+            style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.7)' }}>
+
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-white font-bold text-lg">Manage Invoice Statuses</h3>
+              <button onClick={() => setShowInvoiceStatusModal(false)}
+                className="text-gray-500 hover:text-red-400 transition text-xl leading-none">×</button>
+            </div>
+
+            <div className="space-y-2 mb-5 max-h-64 overflow-y-auto pr-1">
+              {allInvoiceStatuses.length === 0 && (
+                <p className="text-gray-600 text-sm text-center py-4">No invoice statuses yet. Add one below.</p>
+              )}
+              {allInvoiceStatuses.map(s => (
+                <div key={s._id} className="flex items-center justify-between bg-[#0a0a0a] border border-gray-800 rounded-lg px-4 py-2.5">
+                  <span className="text-gray-300 text-sm">{s.label}</span>
+                  <button onClick={() => handleDeleteInvoiceStatus(s._id)}
+                    className="text-xs bg-red-600/80 hover:bg-red-700 text-white px-2.5 py-1 rounded transition ml-3">
+                    Delete
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="border-t border-gray-800 pt-4">
+              <p className="text-gray-500 text-xs uppercase tracking-wide mb-2">Add New Invoice Status</p>
+              <div className="flex gap-2">
+                <input
+                  value={newInvoiceStatusLabel}
+                  onChange={e => setNewInvoiceStatusLabel(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleAddInvoiceStatus()}
+                  placeholder="e.g. Invoice Reviewed, Payment Confirmed…"
+                  autoFocus
+                  className="flex-1 bg-black border border-gray-700 focus:border-purple-500 text-white placeholder-gray-600 px-3 py-2 rounded-lg text-sm outline-none transition"
+                />
+                <button
+                  onClick={handleAddInvoiceStatus}
+                  disabled={invoiceStatusAdding || !newInvoiceStatusLabel.trim()}
+                  className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-sm font-semibold px-4 py-2 rounded-lg transition"
+                >
+                  {invoiceStatusAdding ? '…' : 'Add'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Invoice View Modal ── */}
       {viewingInvoice && (
@@ -1552,14 +1791,15 @@ export default function Admin() {
           style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}
           onClick={e => { if (e.target === e.currentTarget) setDriverModal(null); }}
         >
-          <div className="bg-[#111] border border-gray-800 rounded-2xl w-full max-w-2xl"
+          <div className="bg-[#111] border border-gray-800 rounded-2xl w-full max-w-2xl flex flex-col max-h-[85vh]"
             style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.7)' }}>
 
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-800">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-800 flex-shrink-0">
               <div>
                 <h3 className="text-white font-bold text-lg flex items-center gap-2">
                   <FaUserTie className="text-red-500" /> Drivers
+                  {driverModalData.length > 0 && <span className="text-sm text-gray-500 font-normal">({driverModalData.length})</span>}
                 </h3>
                 <p className="text-gray-500 text-xs mt-0.5">{driverModal.name}</p>
               </div>
@@ -1570,7 +1810,7 @@ export default function Admin() {
             </div>
 
             {/* Modal Body */}
-            <div className="p-6">
+            <div className="p-6 overflow-y-auto flex-1">
               {driverModalLoading ? (
                 <div className="flex items-center justify-center py-10">
                   <div className="w-7 h-7 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
@@ -1630,6 +1870,15 @@ export default function Admin() {
 
             {/* Modal Body */}
             <div className="p-6">
+              {/* Search */}
+              {!vehicleModalLoading && vehicleModalData.length > 0 && (
+                <input
+                  value={vehicleSearch}
+                  onChange={e => setVehicleSearch(e.target.value)}
+                  placeholder="Search by make/model, license, VIN…"
+                  className="w-full bg-black border border-gray-700 focus:border-red-600 text-white placeholder-gray-600 px-4 py-2.5 rounded-lg text-sm outline-none transition mb-4"
+                />
+              )}
               {vehicleModalLoading ? (
                 <div className="flex items-center justify-center py-10">
                   <div className="w-7 h-7 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
@@ -1647,7 +1896,10 @@ export default function Admin() {
                       </tr>
                     </thead>
                     <tbody>
-                      {vehicleModalData.map(v => (
+                      {vehicleModalData.filter(v => {
+                        const q = vehicleSearch.toLowerCase();
+                        return !q || [v.makeModel, v.licenseNo, v.vinNumber].some(f => (f||'').toLowerCase().includes(q));
+                      }).map(v => (
                         <tr key={v._id} className="hover:bg-white/2">
                           <td className={tdCls}><span className="font-medium text-white">{v.makeModel}</span></td>
                           <td className={tdCls}>{v.licenseNo}</td>
@@ -1656,6 +1908,12 @@ export default function Admin() {
                           <td className={tdCls}>{new Date(v.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
                         </tr>
                       ))}
+                      {vehicleSearch && !vehicleModalData.filter(v => {
+                        const q = vehicleSearch.toLowerCase();
+                        return [v.makeModel, v.licenseNo, v.vinNumber].some(f => (f||'').toLowerCase().includes(q));
+                      }).length && (
+                        <tr><td colSpan={5} className="px-4 py-6 text-center text-gray-600">No matching vehicles.</td></tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
