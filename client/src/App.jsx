@@ -17,6 +17,7 @@ import FleetSignup from './pages/FleetSignup';
 import MemberSignup from './pages/MemberSignup';
 import NotFound from './pages/NotFound';
 import StripePayment from './pages/StripePayment';
+import GabrielScott from './pages/GabrielScott';
 
 /* Redirect logged-in users to their dashboard */
 const PublicRoute = ({ element }) => {
@@ -45,6 +46,7 @@ function Layout() {
         <Route path="/account/fleet" element={<PublicRoute element={<FleetSignup />} />} />
         <Route path="/account/membership" element={<PublicRoute element={<MemberSignup />} />} />
         <Route path="/stripe-payment" element={<StripePayment />} />
+        <Route path="/team/gabriel-scott" element={<PublicRoute element={<GabrielScott />} />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/fleet-dashboard" element={<FleetDashboard />} />
         <Route path="/member-dashboard" element={<MemberDashboard />} />

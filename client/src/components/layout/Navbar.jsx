@@ -8,6 +8,7 @@ const navLinks = [
   { label: 'Home', to: '/' },
   { label: 'About Us', to: '/about' },
   { label: 'Services', to: '/services' },
+  { label: 'Our Team', to: '/team/gabriel-scott' },
   { label: 'Booking', to: '/booknow' },
   { label: 'Contact Us', to: '/contact' },
 ];
