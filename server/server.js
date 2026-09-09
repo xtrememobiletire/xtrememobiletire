@@ -9,21 +9,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Routes
-app.use('/api/fleet', require('./routes/fleet'));
-app.use('/api/members', require('./routes/members'));
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/bookings', require('./routes/bookings'));
-app.use('/api/contact', require('./routes/contact'));
-app.use('/api/admin', require('./routes/admin'));
-app.use('/api/stripe', require('./routes/stripe'));
-app.use('/api/service-requests', require('./routes/serviceRequests'));
-app.use('/api/vehicles', require('./routes/vehicles'));
-app.use('/api/drivers', require('./routes/drivers'));
-app.use('/api/invoices', require('./routes/invoices'));
-
-// Health check
-app.get('/', (req, res) => res.json({ message: 'XMT Backend Running' }));
+// MongoDB Atlas connection caching for serverless & local development
+let connPromise = null;
 
 // Backfill missing fleetId / memberId for records created before the field was added
 async function backfillIds() {
@@ -52,12 +39,13 @@ async function backfillIds() {
   }
 }
 
-// MongoDB Atlas connection caching for serverless & local development
-let connPromise = null;
-
 async function connectDB() {
   if (mongoose.connection.readyState === 1) {
     return;
+  }
+  if (!process.env.MONGO_URI) {
+    console.error('ERROR: MONGO_URI environment variable is missing!');
+    throw new Error('MONGO_URI is not set in environment variables');
   }
   if (!connPromise) {
     connPromise = mongoose.connect(process.env.MONGO_URI, {
@@ -76,16 +64,35 @@ async function connectDB() {
   await connPromise;
 }
 
-// Middleware to ensure DB connection is ready before handling API requests
+// Database connection middleware - MUST run before routes!
 app.use(async (req, res, next) => {
   try {
     await connectDB();
     next();
   } catch (err) {
     console.error('Database connection error:', err.message);
-    res.status(500).json({ error: 'Database connection failed' });
+    res.status(500).json({ error: 'Database connection failed: ' + err.message });
   }
 });
+
+// Routes
+app.use('/api/fleet', require('./routes/fleet'));
+app.use('/api/members', require('./routes/members'));
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/bookings', require('./routes/bookings'));
+app.use('/api/contact', require('./routes/contact'));
+app.use('/api/admin', require('./routes/admin'));
+app.use('/api/stripe', require('./routes/stripe'));
+app.use('/api/service-requests', require('./routes/serviceRequests'));
+app.use('/api/vehicles', require('./routes/vehicles'));
+app.use('/api/drivers', require('./routes/drivers'));
+app.use('/api/invoices', require('./routes/invoices'));
+
+// Health check
+app.get('/', (req, res) => res.json({ 
+  message: 'XMT Backend Running', 
+  dbConnected: mongoose.connection.readyState === 1 
+}));
 
 // Start local server if run directly (node server.js / nodemon)
 if (require.main === module) {
