@@ -4,9 +4,9 @@
   "description": "Xtreme Mobile Tire - MERN Stack Application",
   "main": "index.js",
   "scripts": {
-    "client": "npm run dev --prefix client",
+    "client": "pnpm --dir client dev",
     "server": "nodemon server/server.js",
-    "dev": "concurrently \"npm run server\" \"npm run client\""
+    "dev": "concurrently \"pnpm run server\" \"pnpm run client\""
   },
   "keywords": [],
   "author": "",

@@ -52,21 +52,52 @@ async function backfillIds() {
   }
 }
 
-// Connect MongoDB & start server
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(async () => {
-    console.log('MongoDB Atlas connected');
-    // Drop the old single-field unique index on CustomStatus.label if it exists
-    try {
-      await mongoose.connection.collection('customstatuses').dropIndex('label_1');
-      console.log('Dropped old CustomStatus label_1 index');
-    } catch { /* index may not exist, ignore */ }
-    await backfillIds();
-    const PORT = process.env.PORT || 5000;
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-  })
-  .catch((err) => {
-    console.error('MongoDB connection error:', err.message);
-    process.exit(1);
-  });
+// MongoDB Atlas connection caching for serverless & local development
+let connPromise = null;
+
+async function connectDB() {
+  if (mongoose.connection.readyState === 1) {
+    return;
+  }
+  if (!connPromise) {
+    connPromise = mongoose.connect(process.env.MONGO_URI, {
+      serverSelectionTimeoutMS: 8000,
+    }).then(async () => {
+      console.log('MongoDB Atlas connected');
+      try {
+        await mongoose.connection.collection('customstatuses').dropIndex('label_1');
+      } catch { /* index may not exist, ignore */ }
+      await backfillIds();
+    }).catch((err) => {
+      connPromise = null;
+      throw err;
+    });
+  }
+  await connPromise;
+}
+
+// Middleware to ensure DB connection is ready before handling API requests
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    console.error('Database connection error:', err.message);
+    res.status(500).json({ error: 'Database connection failed' });
+  }
+});
+
+// Start local server if run directly (node server.js / nodemon)
+if (require.main === module) {
+  const PORT = process.env.PORT || 5000;
+  connectDB()
+    .then(() => {
+      app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    })
+    .catch((err) => {
+      console.error('MongoDB connection error:', err.message);
+      process.exit(1);
+    });
+}
+
+module.exports = app;
