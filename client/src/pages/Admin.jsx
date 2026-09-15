@@ -57,7 +57,8 @@ const InvoicePreview = ({ form, items, tax, taxPercent, logo }) => {
             <p className="text-xs text-gray-600 mt-0.5">{form.companyName}</p>
           )}
           {form.clientPhone   && <p className="text-xs text-gray-700 mt-0.5">{form.clientPhone}</p>}
-          {form.clientAddress && <p className="text-xs text-gray-700 mt-0.5">{form.clientAddress}</p>}
+          {form.clientAddress && <p className="text-xs text-gray-700 mt-0.5 whitespace-pre-line">{form.clientAddress}</p>}
+          {form.vehicleInfo   && <p className="text-xs text-gray-600 mt-0.5">Vehicle: {form.vehicleInfo}</p>}
           {form.driverName    && <p className="text-xs text-gray-600 mt-0.5">Driver: {form.driverName}</p>}
         </div>
         {/* Dates */}
@@ -1316,10 +1317,24 @@ export default function Admin() {
                           className="flex items-center gap-2 text-gray-400 hover:text-white transition border border-gray-700 hover:border-gray-500 px-4 py-2.5 rounded-lg text-sm">
                           <FaChevronLeft className="text-xs" /> Back to Edit
                         </button>
-                        <button onClick={() => { setInvoiceStep(3); loadUsersList(); }}
-                          className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-2.5 rounded-lg transition">
-                          <FaPaperPlane className="text-xs" /> Send To →
-                        </button>
+                        <div className="flex items-center gap-3">
+                          <button onClick={() => downloadInvoicePDF({
+                            ...invoiceForm,
+                            items: invoiceItems,
+                            subTotal: invoiceSubTotal,
+                            netTotal: invoiceSubTotal,
+                            tax: invoiceTaxAmt,
+                            taxPercent: invoiceTaxPct,
+                            grandTotal: invoiceGrandTotal,
+                          }, xtremeBlackLogo)}
+                            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2.5 rounded-lg transition text-sm">
+                            <FaDownload className="text-xs" /> Download PDF
+                          </button>
+                          <button onClick={() => { setInvoiceStep(3); loadUsersList(); }}
+                            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-2.5 rounded-lg transition">
+                            <FaPaperPlane className="text-xs" /> Send To →
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )}

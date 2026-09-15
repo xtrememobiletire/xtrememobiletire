@@ -59,6 +59,13 @@ export const downloadInvoicePDF = async (inv, logoUrl) => {
     ? `<span style="display:inline-block;background:#dcfce7;color:#16a34a;border:1px solid #bbf7d0;border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700;margin-left:10px;">✓ PAID</span>`
     : '';
 
+  const clientName    = inv.clientName || inv.recipientName || inv.companyName || '—';
+  const companyName   = inv.companyName || '';
+  const clientPhone   = inv.clientPhone || inv.phone || inv.recipientPhone || '';
+  const clientAddress = inv.clientAddress || inv.address || inv.recipientAddress || '';
+  const driverName    = inv.driverName || '';
+  const vehicleInfo   = inv.vehicleInfo || '';
+
   const html = `<!DOCTYPE html>
 <html>
 <head>
@@ -144,11 +151,12 @@ export const downloadInvoicePDF = async (inv, logoUrl) => {
   <!-- Info Row -->
   <div class="info-row">
     <div class="info-client">
-      <p class="c-name">${inv.clientName || inv.companyName || '—'}</p>
-      ${inv.companyName && inv.clientName && inv.companyName !== inv.clientName ? `<p>${inv.companyName}</p>` : ''}
-      ${inv.clientPhone   ? `<p>${inv.clientPhone}</p>` : ''}
-      ${inv.clientAddress ? `<p>${inv.clientAddress}</p>` : ''}
-      ${inv.driverName    ? `<p>Driver: ${inv.driverName}</p>` : ''}
+      <p class="c-name">${clientName}</p>
+      ${companyName && clientName && companyName !== clientName ? `<p>${companyName}</p>` : ''}
+      ${clientPhone   ? `<p>${clientPhone}</p>` : ''}
+      ${clientAddress ? `<p style="white-space: pre-line;">${clientAddress}</p>` : ''}
+      ${vehicleInfo   ? `<p style="color:#4b5563;font-size:12px;margin-top:2px;">Vehicle: ${vehicleInfo}</p>` : ''}
+      ${driverName    ? `<p>Driver: ${driverName}</p>` : ''}
     </div>
     <div class="info-dates">
       <div class="dg">

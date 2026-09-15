@@ -51,8 +51,8 @@ router.post('/admin/create', adminAuth, async (req, res) => {
   try {
     const {
       invoiceNumber, companyName, issueDate, dueDate,
-      driverName, clientName, vehicleInfo,
-      items, subTotal, netTotal, tax, grandTotal,
+      driverName, clientName, clientPhone, clientAddress, vehicleInfo,
+      items, subTotal, netTotal, tax, taxPercent, grandTotal,
     } = req.body;
 
     // Check duplicate invoice number
@@ -61,14 +61,17 @@ router.post('/admin/create', adminAuth, async (req, res) => {
 
     const invoice = new Invoice({
       invoiceNumber, companyName, issueDate, dueDate,
-      driverName:  driverName  || '',
-      clientName:  clientName  || '',
-      vehicleInfo: vehicleInfo || '',
-      items:       items       || [],
-      subTotal:    subTotal    || 0,
-      netTotal:    netTotal    || 0,
-      tax:         tax         || 0,
-      grandTotal:  grandTotal  || 0,
+      driverName:    driverName    || '',
+      clientName:    clientName    || '',
+      clientPhone:   clientPhone   || '',
+      clientAddress: clientAddress || '',
+      vehicleInfo:   vehicleInfo   || '',
+      items:         items         || [],
+      subTotal:      subTotal      || 0,
+      netTotal:      netTotal      || 0,
+      tax:           tax           || 0,
+      taxPercent:    taxPercent    || 0,
+      grandTotal:    grandTotal    || 0,
       status: 'draft',
     });
 
@@ -83,12 +86,26 @@ router.post('/admin/create', adminAuth, async (req, res) => {
 router.post('/admin/:id/send', adminAuth, async (req, res) => {
   try {
     const { recipientId, recipientType, recipientName, recipientEmail } = req.body;
-    const invoice = await Invoice.findByIdAndUpdate(
-      req.params.id,
-      { recipientId, recipientType, recipientName, recipientEmail, status: 'pending' },
-      { new: true }
-    );
+    const invoice = await Invoice.findById(req.params.id);
     if (!invoice) return res.status(404).json({ message: 'Invoice not found.' });
+
+    invoice.recipientId    = recipientId;
+    invoice.recipientType  = recipientType;
+    invoice.recipientName  = recipientName;
+    invoice.recipientEmail = recipientEmail;
+    invoice.status         = 'pending';
+
+    // Auto-fill clientAddress and clientPhone from recipient fleet/member profile if missing
+    if (!invoice.clientAddress && recipientType === 'fleet' && recipientId) {
+      const fleet = await Fleet.findById(recipientId);
+      if (fleet?.address) invoice.clientAddress = fleet.address;
+      if (!invoice.clientPhone && fleet?.phone) invoice.clientPhone = fleet.phone;
+    } else if (!invoice.clientPhone && recipientType === 'member' && recipientId) {
+      const member = await Member.findById(recipientId);
+      if (member?.phone) invoice.clientPhone = member.phone;
+    }
+
+    await invoice.save();
     res.json(invoice);
   } catch (err) {
     res.status(500).json({ message: err.message });
