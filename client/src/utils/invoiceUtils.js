@@ -15,13 +15,153 @@ const toDataUrl = async (url) => {
   }
 };
 
+export const REGIONS = {
+  usa: {
+    key: 'usa',
+    label: 'USA',
+    flag: '🇺🇸',
+    name: 'XTREME MOBILE TIRE',
+    addressHtml: `
+      <p>11815 Medway Church Loop</p>
+      <p>Manassas, VA 20109</p>
+      <p>United States</p>
+    `,
+    previewAddress: '11815 Medway Church Loop, Manassas, VA 20109',
+  },
+  canada: {
+    key: 'canada',
+    label: 'Canada',
+    flag: '🇨🇦',
+    name: 'XTREME MOBILE TIRE',
+    addressHtml: `
+      <p>857 Winterton Way, Mississauga</p>
+      <p>ON L5V 1Z5 Canada</p>
+      <p class="hst">HST# 799787635RT001</p>
+    `,
+    previewAddress: '857 Winterton Way, Mississauga, ON L5V 1Z5',
+  },
+  uk: {
+    key: 'uk',
+    label: 'UK',
+    flag: '🇬🇧',
+    name: 'XTREME MOBILE TIRE',
+    addressHtml: `
+      <p>71-75 Shelton Street, Covent Garden</p>
+      <p>London, WC2H 9JQ</p>
+      <p>United Kingdom</p>
+      <p class="hst">VAT# GB 987 6543 21</p>
+    `,
+    previewAddress: '71-75 Shelton Street, Covent Garden, London, WC2H 9JQ',
+  },
+};
+
+/**
+ * Prompts the user to select an invoice region (USA, Canada, or UK) before downloading/printing.
+ */
+export const promptRegionSelection = () => {
+  return new Promise((resolve) => {
+    const existing = document.getElementById('xmt-region-modal');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'xmt-region-modal';
+    overlay.style.cssText = `
+      position: fixed; inset: 0; z-index: 99999;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(6px);
+      display: flex; align-items: center; justify-content: center;
+      padding: 16px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    `;
+
+    overlay.innerHTML = `
+      <style>
+        .xmt-opt-btn {
+          width: 100%; display: flex; align-items: center; gap: 14px;
+          padding: 14px 16px; border-radius: 12px; border: 1px solid #27272a;
+          background: #18181b; color: #fff; text-align: left; cursor: pointer;
+          transition: all 0.15s ease;
+        }
+        .xmt-opt-btn:hover {
+          border-color: #dc2626; background: #222227; transform: translateY(-1px);
+        }
+      </style>
+      <div style="background:#0f0f11; border:1px solid #27272a; border-radius:18px; width:100%; max-width:440px; padding:24px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.8); position:relative;">
+        <button id="xmt-close-btn" style="position:absolute; top:16px; right:16px; background:transparent; border:none; color:#71717a; font-size:20px; cursor:pointer; padding:4px 8px; border-radius:6px; line-height:1;">✕</button>
+        
+        <div style="margin-bottom:20px;">
+          <h3 style="margin:0 0 6px 0; color:#fff; font-size:18px; font-weight:700;">Select Invoice Region</h3>
+          <p style="margin:0; color:#a1a1aa; font-size:13px;">Choose company address to display on the generated invoice:</p>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <button class="xmt-opt-btn" data-region="usa">
+            <span style="font-size:28px; line-height:1;">🇺🇸</span>
+            <div style="flex:1;">
+              <div style="font-weight:700; font-size:15px; color:#fff;">USA</div>
+              <div style="font-size:12px; color:#9ca3af; margin-top:2px;">11815 Medway Church Loop, Manassas, VA 20109</div>
+            </div>
+          </button>
+
+          <button class="xmt-opt-btn" data-region="canada">
+            <span style="font-size:28px; line-height:1;">🇨🇦</span>
+            <div style="flex:1;">
+              <div style="font-weight:700; font-size:15px; color:#fff;">Canada</div>
+              <div style="font-size:12px; color:#9ca3af; margin-top:2px;">857 Winterton Way, Mississauga, ON L5V 1Z5</div>
+            </div>
+          </button>
+
+          <button class="xmt-opt-btn" data-region="uk">
+            <span style="font-size:28px; line-height:1;">🇬🇧</span>
+            <div style="flex:1;">
+              <div style="font-weight:700; font-size:15px; color:#fff;">UK</div>
+              <div style="font-size:12px; color:#9ca3af; margin-top:2px;">71-75 Shelton Street, Covent Garden, London, WC2H 9JQ</div>
+            </div>
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const cleanup = () => { overlay.remove(); };
+
+    overlay.querySelector('#xmt-close-btn').onclick = () => {
+      cleanup();
+      resolve(null);
+    };
+
+    overlay.onclick = (e) => {
+      if (e.target === overlay) {
+        cleanup();
+        resolve(null);
+      }
+    };
+
+    overlay.querySelectorAll('.xmt-opt-btn').forEach((btn) => {
+      btn.onclick = () => {
+        const reg = btn.getAttribute('data-region');
+        cleanup();
+        resolve(reg);
+      };
+    });
+  });
+};
+
 /**
  * Opens a styled print window with the invoice matching the Client Invoice template.
  *
- * @param {Object} inv      – Invoice document from MongoDB
- * @param {string} logoUrl  – The imported logo URL (xtremeblack.png)
+ * @param {Object} inv       – Invoice document from MongoDB
+ * @param {string} logoUrl   – The imported logo URL (xtremeblack.png)
+ * @param {string} [region]  – 'usa' | 'canada' | 'uk' (prompts if omitted)
  */
-export const downloadInvoicePDF = async (inv, logoUrl) => {
+export const downloadInvoicePDF = async (inv, logoUrl, region) => {
+  let selectedRegion = region;
+  if (!selectedRegion || !REGIONS[selectedRegion]) {
+    selectedRegion = await promptRegionSelection();
+    if (!selectedRegion) return; // User cancelled
+  }
+
+  const regionConfig = REGIONS[selectedRegion] || REGIONS.canada;
   const logoDataUrl = logoUrl ? await toDataUrl(logoUrl) : '';
 
   const items      = inv.items || [];
@@ -170,10 +310,8 @@ export const downloadInvoicePDF = async (inv, logoUrl) => {
       ${inv.paidAt ? `<div class="dg"><p class="dl">Paid On</p><p class="dv">${new Date(inv.paidAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</p></div>` : ''}
     </div>
     <div class="info-company">
-      <p class="co-name">XTREME MOBILE TIRE</p>
-      <p>857 Winterton Way, Mississauga</p>
-      <p>ON L5V 1Z5 Canada</p>
-      <p class="hst">HST# 799787635RT001</p>
+      <p class="co-name">${regionConfig.name}</p>
+      ${regionConfig.addressHtml}
     </div>
   </div>
 
